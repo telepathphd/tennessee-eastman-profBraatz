@@ -1,132 +1,307 @@
 <template>
-  <svg class="pfd" viewBox="0 0 1120 560" role="img" aria-label="Tennessee Eastman 工艺流程图">
+  <svg class="pfd" viewBox="0 0 1120 520" role="img" aria-label="Tennessee Eastman 工艺流程图">
     <defs>
-      <pattern id="sheet" width="16" height="16" patternUnits="userSpaceOnUse">
-        <path d="M16 0H0V16" fill="none" stroke="#c5d3db" stroke-width="0.6" />
-      </pattern>
       <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
-        <path d="M0 0 L10 5 L0 10 z" fill="#1a5f8a" />
+        <path d="M0 0 L10 5 L0 10 z" fill="#6a737b" />
       </marker>
     </defs>
-    <rect width="1120" height="560" fill="#e8eef1" />
-    <rect width="1120" height="560" fill="url(#sheet)" />
+    <rect width="1120" height="520" fill="var(--panel)" />
 
-    <!-- feeds -->
     <g class="stream">
-      <path d="M40 120 H170" marker-end="url(#arr)" />
-      <path d="M40 160 H170" marker-end="url(#arr)" />
-      <path d="M40 200 H170" marker-end="url(#arr)" />
-      <path d="M40 240 H170" marker-end="url(#arr)" />
-      <text x="44" y="108">S1 A</text>
-      <text x="44" y="148">S2 D</text>
-      <text x="44" y="188">S3 E</text>
-      <text x="44" y="228">S4 A/C</text>
-      <text class="val" x="86" y="108">{{ m(1) }}</text>
-      <text class="val" x="86" y="148">{{ m(2) }}</text>
-      <text class="val" x="86" y="188">{{ m(3) }}</text>
-      <text class="val" x="86" y="228">{{ m(4) }}</text>
+      <path d="M40 110 H170" marker-end="url(#arr)" />
+      <path d="M40 150 H170" marker-end="url(#arr)" />
+      <path d="M40 190 H170" marker-end="url(#arr)" />
+      <path d="M40 230 H170" marker-end="url(#arr)" />
     </g>
 
-    <!-- reactor -->
-    <g class="unit" transform="translate(170,80)">
+    <g class="hot" :class="hotClass(1)" @click="onPin($event, 1)">
+      <title>进料 A（物流 1）</title>
+      <rect class="hit" x="36" y="86" width="128" height="28" />
+      <text x="44" y="104">S1 A</text>
+      <text class="val" :class="valClass(1)" x="100" y="104">{{ m(1) }}</text>
+    </g>
+    <g class="hot" :class="hotClass(2)" @click="onPin($event, 2)">
+      <title>进料 D（物流 2）</title>
+      <rect class="hit" x="36" y="126" width="128" height="28" />
+      <text x="44" y="144">S2 D</text>
+      <text class="val" :class="valClass(2)" x="100" y="144">{{ m(2) }}</text>
+    </g>
+    <g class="hot" :class="hotClass(3)" @click="onPin($event, 3)">
+      <title>进料 E（物流 3）</title>
+      <rect class="hit" x="36" y="166" width="128" height="28" />
+      <text x="44" y="184">S3 E</text>
+      <text class="val" :class="valClass(3)" x="100" y="184">{{ m(3) }}</text>
+    </g>
+    <g class="hot" :class="hotClass(4)" @click="onPin($event, 4)">
+      <title>进料 A/C（物流 4）</title>
+      <rect class="hit" x="36" y="206" width="128" height="28" />
+      <text x="44" y="224">S4 A/C</text>
+      <text class="val" :class="valClass(4)" x="100" y="224">{{ m(4) }}</text>
+    </g>
+
+    <g class="equip" transform="translate(170,70)">
       <rect x="0" y="20" width="170" height="200" rx="86" />
       <line x1="20" y1="70" x2="150" y2="70" />
       <circle cx="85" cy="130" r="14" />
       <line x1="85" y1="116" x2="85" y2="144" />
       <line x1="71" y1="130" x2="99" y2="130" />
       <text class="title" x="85" y="48">反应器</text>
-      <text class="val" x="85" y="188">{{ m(9) }} °C</text>
-      <text class="val" x="85" y="206">{{ m(7) }} kPa</text>
-      <text class="val" x="85" y="224">L {{ m(8) }} %</text>
-      <text class="small" x="85" y="248">CW out {{ m(21) }} °C</text>
     </g>
 
-    <!-- condenser -->
-    <g class="unit" transform="translate(430,40)">
+    <g class="hot" :class="hotClass(9)" transform="translate(348,96)" @click="onPin($event, 9)">
+      <title>反应器温度</title>
+      <rect class="hit" x="0" y="0" width="86" height="52" />
+      <AnalogBar
+        :width="10"
+        :height="48"
+        :value="num(9)"
+        v-bind="bar(9)"
+        :setpoint="setpointOf(9)"
+        :status="st(9)"
+      />
+      <text class="lbl" x="16" y="14">T</text>
+      <text class="val" :class="valClass(9)" x="16" y="30">{{ m(9) }}</text>
+      <text class="u" x="16" y="44">°C</text>
+    </g>
+    <g class="hot" :class="hotClass(7)" transform="translate(348,154)" @click="onPin($event, 7)">
+      <title>反应器压力</title>
+      <rect class="hit" x="0" y="0" width="86" height="52" />
+      <AnalogBar
+        :width="10"
+        :height="48"
+        :value="num(7)"
+        v-bind="bar(7)"
+        :setpoint="setpointOf(7)"
+        :status="st(7)"
+      />
+      <text class="lbl" x="16" y="14">P</text>
+      <text class="val" :class="valClass(7)" x="16" y="30">{{ m(7) }}</text>
+      <text class="u" x="16" y="44">kPa</text>
+    </g>
+    <g class="hot" :class="hotClass(8)" transform="translate(348,212)" @click="onPin($event, 8)">
+      <title>反应器液位</title>
+      <rect class="hit" x="0" y="0" width="86" height="52" />
+      <AnalogBar
+        :width="10"
+        :height="48"
+        :value="num(8)"
+        v-bind="bar(8)"
+        :setpoint="setpointOf(8)"
+        :status="st(8)"
+      />
+      <text class="lbl" x="16" y="14">L</text>
+      <text class="val" :class="valClass(8)" x="16" y="30">{{ m(8) }}</text>
+      <text class="u" x="16" y="44">%</text>
+    </g>
+    <g class="hot" :class="hotClass(21)" transform="translate(196,296)" @click="onPin($event, 21)">
+      <title>反应器冷却水出口温度</title>
+      <rect class="hit" x="0" y="0" width="130" height="22" />
+      <text class="small" x="0" y="14">CW {{ m(21) }} °C</text>
+    </g>
+
+    <g class="equip" transform="translate(430,28)">
       <rect x="0" y="0" width="150" height="70" />
       <line x1="18" y1="18" x2="132" y2="18" />
       <line x1="18" y1="35" x2="132" y2="35" />
       <line x1="18" y1="52" x2="132" y2="52" />
-      <text class="title" x="75" y="46">冷凝器</text>
-      <text class="small" x="75" y="88">CW out {{ m(22) }} °C</text>
+      <text class="title" x="75" y="44">冷凝器</text>
+    </g>
+    <g class="hot" :class="hotClass(22)" transform="translate(448,104)" @click="onPin($event, 22)">
+      <title>冷凝器冷却水出口温度</title>
+      <rect class="hit" x="0" y="0" width="130" height="20" />
+      <text class="small" x="0" y="14">CW {{ m(22) }} °C</text>
     </g>
 
-    <!-- separator -->
-    <g class="unit" transform="translate(640,70)">
-      <rect x="0" y="0" width="180" height="160" rx="8" />
+    <g class="equip" transform="translate(640,58)">
+      <rect x="0" y="0" width="180" height="160" rx="4" />
       <line x1="16" y1="78" x2="164" y2="78" stroke-dasharray="6 4" />
-      <text class="title" x="90" y="28">气液分离器</text>
-      <text class="val" x="90" y="108">{{ m(11) }} °C</text>
-      <text class="val" x="90" y="126">{{ m(13) }} kPa</text>
-      <text class="val" x="90" y="144">L {{ m(12) }} %</text>
+      <text class="title" x="90" y="24">气液分离器</text>
+    </g>
+    <g class="hot" :class="hotClass(11)" transform="translate(650,118)" @click="onPin($event, 11)">
+      <title>分离器温度</title>
+      <rect class="hit" x="0" y="0" width="100" height="20" />
+      <text class="val" :class="valClass(11)" x="50" y="14">{{ m(11) }} °C</text>
+    </g>
+    <g class="hot" :class="hotClass(13)" transform="translate(650,140)" @click="onPin($event, 13)">
+      <title>分离器压力</title>
+      <rect class="hit" x="0" y="0" width="100" height="20" />
+      <text class="val" :class="valClass(13)" x="50" y="14">{{ m(13) }} kPa</text>
+    </g>
+    <g class="hot" :class="hotClass(12)" transform="translate(828,100)" @click="onPin($event, 12)">
+      <title>分离器液位</title>
+      <rect class="hit" x="0" y="0" width="78" height="52" />
+      <AnalogBar
+        :width="10"
+        :height="48"
+        :value="num(12)"
+        v-bind="bar(12)"
+        :setpoint="setpointOf(12)"
+        :status="st(12)"
+      />
+      <text class="lbl" x="16" y="14">L</text>
+      <text class="val" :class="valClass(12)" x="16" y="30">{{ m(12) }}</text>
+      <text class="u" x="16" y="44">%</text>
     </g>
 
-    <!-- compressor -->
-    <g class="unit" transform="translate(430,250)">
+    <g class="equip" transform="translate(430,238)">
       <polygon points="20,20 130,50 20,80" />
-      <text class="title" x="86" y="108">循环压缩机</text>
-      <text class="val" x="86" y="126">{{ m(20) }} kW</text>
-      <text class="small" x="86" y="144">S8 {{ m(5) }}</text>
+      <text class="title" x="86" y="104">循环压缩机</text>
+    </g>
+    <g class="hot" :class="hotClass(20)" transform="translate(456,348)" @click="onPin($event, 20)">
+      <title>压缩机功率</title>
+      <rect class="hit" x="0" y="0" width="120" height="22" />
+      <text class="val" :class="valClass(20)" x="50" y="16">{{ m(20) }} kW</text>
+    </g>
+    <g class="hot" :class="hotClass(5)" transform="translate(456,370)" @click="onPin($event, 5)">
+      <title>循环流量（物流 8）</title>
+      <rect class="hit" x="0" y="0" width="120" height="20" />
+      <text class="small" x="50" y="14">S8 {{ m(5) }}</text>
     </g>
 
-    <!-- stripper -->
-    <g class="unit" transform="translate(880,160)">
+    <g class="equip" transform="translate(880,148)">
       <rect x="20" y="0" width="120" height="250" />
       <path d="M32 40 H128 M32 80 H128 M32 120 H128 M32 160 H128 M32 200 H128" />
-      <text class="title" x="80" y="24">汽提塔</text>
-      <text class="val" x="80" y="268">{{ m(18) }} °C</text>
-      <text class="val" x="80" y="286">L {{ m(15) }} %</text>
-      <text class="small" x="80" y="304">S11 {{ m(17) }}</text>
+      <text class="title" x="80" y="22">汽提塔</text>
+    </g>
+    <g class="hot" :class="hotClass(18)" transform="translate(1018,210)" @click="onPin($event, 18)">
+      <title>汽提塔温度</title>
+      <rect class="hit" x="0" y="0" width="90" height="22" />
+      <text class="val" :class="valClass(18)" x="0" y="16">{{ m(18) }} °C</text>
+    </g>
+    <g class="hot" :class="hotClass(15)" transform="translate(1018,236)" @click="onPin($event, 15)">
+      <title>汽提塔液位</title>
+      <rect class="hit" x="0" y="0" width="90" height="52" />
+      <AnalogBar
+        :width="10"
+        :height="48"
+        :value="num(15)"
+        v-bind="bar(15)"
+        :setpoint="setpointOf(15)"
+        :status="st(15)"
+      />
+      <text class="lbl" x="16" y="14">L</text>
+      <text class="val" :class="valClass(15)" x="16" y="30">{{ m(15) }}</text>
+      <text class="u" x="16" y="44">%</text>
+    </g>
+    <g class="hot" :class="hotClass(17)" transform="translate(900,412)" @click="onPin($event, 17)">
+      <title>产品流量（物流 11）</title>
+      <rect class="hit" x="0" y="0" width="140" height="22" />
+      <text class="small" x="70" y="16">S11 {{ m(17) }}</text>
     </g>
 
-    <!-- process lines -->
     <g class="stream">
-      <path d="M340 180 H430 V75 H580" marker-end="url(#arr)" />
-      <path d="M580 75 H640" marker-end="url(#arr)" />
-      <path d="M820 110 H940 V160" marker-end="url(#arr)" />
-      <path d="M820 200 H900" marker-end="url(#arr)" />
-      <path d="M730 230 V300 H560" marker-end="url(#arr)" />
-      <path d="M430 290 H340 V220" marker-end="url(#arr)" />
-      <path d="M820 90 H1040" marker-end="url(#arr)" />
-      <path d="M940 410 H1040" marker-end="url(#arr)" />
-      <text x="980" y="78">S9 放空</text>
-      <text class="val" x="980" y="96">{{ m(10) }}</text>
-      <text x="980" y="430">S11 产品</text>
-      <text class="val" x="980" y="448">G {{ m(40) }} %</text>
-      <text class="val" x="980" y="466">H {{ m(41) }} %</text>
-      <text x="500" y="200">S6 {{ m(6) }}</text>
+      <path d="M340 170 H430 V63 H580" marker-end="url(#arr)" />
+      <path d="M580 63 H640" marker-end="url(#arr)" />
+      <path d="M820 98 H940 V148" marker-end="url(#arr)" />
+      <path d="M820 188 H900" marker-end="url(#arr)" />
+      <path d="M730 218 V288 H560" marker-end="url(#arr)" />
+      <path d="M430 278 H340 V208" marker-end="url(#arr)" />
+      <path d="M820 78 H1040" marker-end="url(#arr)" />
+      <path d="M940 398 H1040" marker-end="url(#arr)" />
+    </g>
+    <g class="hot" :class="hotClass(6)" transform="translate(470,186)" @click="onPin($event, 6)">
+      <title>反应器进料（物流 6）</title>
+      <rect class="hit" x="0" y="0" width="90" height="20" />
+      <text class="small" x="0" y="14">S6 {{ m(6) }}</text>
+    </g>
+    <g class="hot" :class="hotClass(10)" transform="translate(960,62)" @click="onPin($event, 10)">
+      <title>放空流量（物流 9）</title>
+      <rect class="hit" x="0" y="0" width="140" height="36" />
+      <text x="0" y="14">S9 放空</text>
+      <text class="val" :class="valClass(10)" x="0" y="30">{{ m(10) }}</text>
+    </g>
+    <g class="hot" :class="hotClass(40)" transform="translate(960,430)" @click="onPin($event, 40)">
+      <title>产品 G</title>
+      <rect class="hit" x="0" y="0" width="150" height="28" />
+      <AnalogBar
+        :width="48"
+        :height="8"
+        :vertical="false"
+        :value="num(40)"
+        v-bind="bar(40)"
+        :status="st(40)"
+      />
+      <text class="val" :class="valClass(40)" x="54" y="8">G {{ m(40) }} %</text>
+    </g>
+    <g class="hot" :class="hotClass(41)" transform="translate(960,458)" @click="onPin($event, 41)">
+      <title>产品 H</title>
+      <rect class="hit" x="0" y="0" width="150" height="28" />
+      <AnalogBar
+        :width="48"
+        :height="8"
+        :vertical="false"
+        :value="num(41)"
+        v-bind="bar(41)"
+        :status="st(41)"
+      />
+      <text class="val" :class="valClass(41)" x="54" y="8">H {{ m(41) }} %</text>
     </g>
 
-    <!-- valves as small diamonds on feeds / product -->
     <g class="valve">
-      <polygon points="150,160 162,152 174,160 162,168" />
-      <polygon points="900,400 912,392 924,400 912,408" />
+      <polygon points="150,150 162,142 174,150 162,158" />
+      <polygon points="900,388 912,380 924,388 912,396" />
     </g>
 
-    <g class="title-block">
-      <rect x="24" y="500" width="420" height="44" />
-      <text class="tb-k" x="36" y="518">DRAWING</text>
-      <text class="tb-v" x="120" y="518">TE-PFD-01  Downs &amp; Vogel 1993</text>
-      <text class="tb-k" x="36" y="536">STATUS</text>
-      <text class="tb-v" x="120" y="536">{{ status }}</text>
-    </g>
+    <text class="foot" x="24" y="506">{{ status }} · 点击测量钉到趋势，Shift+点击移除</text>
   </svg>
 </template>
 
 <script>
+import AnalogBar from "./AnalogBar.vue";
+import { LIMITS, exceptionStatus, formatPv } from "../limits.js";
+
 export default {
+  components: { AnalogBar },
   props: {
     xmeas: { type: Array, default: () => [] },
     status: { type: String, default: "未运行" },
+    pinned: { type: Array, default: () => [] },
+    focusKey: { type: String, default: "" },
+    pens: { type: Object, default: () => ({}) },
+    setpoints: { type: Object, default: () => ({}) },
   },
+  emits: ["pin"],
   methods: {
-    m(n) {
+    key(n) {
+      return `xmeas:${n}`;
+    },
+    num(n) {
       const v = this.xmeas[n - 1];
-      if (v == null || Number.isNaN(v)) return "—";
-      const abs = Math.abs(v);
-      if (abs >= 100) return v.toFixed(1);
-      if (abs >= 10) return v.toFixed(2);
-      return v.toFixed(3);
+      return v == null ? null : Number(v);
+    },
+    m(n) {
+      return formatPv(this.num(n));
+    },
+    st(n) {
+      return exceptionStatus(n, this.num(n));
+    },
+    bar(n) {
+      const lim = LIMITS[n] || { scaleLo: 0, scaleHi: 100 };
+      return {
+        scaleLo: lim.scaleLo,
+        scaleHi: lim.scaleHi,
+        loOp: lim.loOp ?? null,
+        hiOp: lim.hiOp ?? null,
+      };
+    },
+    setpointOf(n) {
+      const v = this.setpoints[n];
+      return v == null ? null : Number(v);
+    },
+    hotClass(n) {
+      const k = this.key(n);
+      return {
+        pinned: this.pinned.includes(k),
+        focus: this.focusKey === k,
+        advisory: this.st(n) === "advisory",
+        trip: this.st(n) === "trip",
+      };
+    },
+    valClass(n) {
+      return this.st(n);
+    },
+    onPin(ev, n) {
+      this.$emit("pin", { key: this.key(n), shift: ev.shiftKey });
     },
   },
 };
@@ -135,70 +310,87 @@ export default {
 <style scoped>
 .pfd {
   width: 100%;
-  height: auto;
+  height: 100%;
   display: block;
-  border: 1px solid var(--rule);
+  max-height: 100%;
 }
 .stream path {
   fill: none;
-  stroke: var(--line);
-  stroke-width: 2.2;
+  stroke: #6a737b;
+  stroke-width: 1.8;
 }
 .stream text,
-.unit text {
+.hot text {
   fill: var(--ink);
   font-family: var(--type-ui);
   font-size: 11px;
 }
-.unit rect,
-.unit polygon {
+.equip rect,
+.equip polygon {
   fill: var(--equip);
-  stroke: var(--ink);
-  stroke-width: 1.6;
+  stroke: #6a737b;
+  stroke-width: 1.4;
 }
-.unit line,
-.unit path,
-.unit circle {
+.equip line,
+.equip path,
+.equip circle {
   fill: none;
-  stroke: var(--ink);
-  stroke-width: 1.2;
+  stroke: #6a737b;
+  stroke-width: 1.1;
 }
 .title {
-  font-family: var(--type-display);
-  font-size: 14px;
+  font-size: 13px;
   text-anchor: middle;
-  font-weight: 600;
-}
-.val,
-.small {
-  font-family: var(--type-data);
-  text-anchor: middle;
-}
-.val {
-  font-size: 12px;
   font-weight: 600;
   fill: var(--ink);
 }
-.small {
+.lbl,
+.u {
   font-size: 10px;
   fill: var(--ink-soft);
 }
-.valve polygon {
-  fill: var(--sheet);
-  stroke: var(--ink);
-  stroke-width: 1.4;
-}
-.title-block rect {
-  fill: #f7fafb;
-  stroke: var(--ink);
-}
-.tb-k {
-  font-size: 9px;
-  letter-spacing: 0.12em;
-  fill: var(--ink-soft);
-}
-.tb-v {
+.val {
   font-family: var(--type-data);
   font-size: 12px;
+  font-weight: 500;
+  fill: var(--ink);
+}
+.val.advisory {
+  fill: var(--advisory);
+  font-weight: 600;
+}
+.val.trip {
+  fill: var(--trip);
+  font-weight: 700;
+}
+.small {
+  font-family: var(--type-data);
+  font-size: 10px;
+  fill: var(--ink-soft);
+}
+.hot .hit {
+  fill: transparent;
+  cursor: pointer;
+}
+.hot.pinned .hit {
+  fill: var(--event);
+  opacity: 0.08;
+}
+.hot.focus .hit {
+  fill: var(--event);
+  opacity: 0.14;
+}
+.hot:hover .hit {
+  fill: #2c3338;
+  opacity: 0.06;
+}
+.valve polygon {
+  fill: var(--panel);
+  stroke: #6a737b;
+  stroke-width: 1.2;
+}
+.foot {
+  font-size: 11px;
+  fill: var(--ink-soft);
 }
 </style>
