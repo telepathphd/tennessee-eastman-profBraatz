@@ -1,0 +1,6 @@
+a.out
+*.exe
+*.o
+*.obj
+*.mod
+TE_data_*.dat

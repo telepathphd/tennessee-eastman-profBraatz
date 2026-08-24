@@ -1,4 +1,4 @@
-//! Closed-loop plant-wide control from `temain_mod.f` (Russell / Chiang / Braatz).
+//! Closed-loop plant-wide control from `archive/temain_mod.f` (Russell / Chiang / Braatz).
 
 #![allow(clippy::manual_is_multiple_of, clippy::neg_multiply)]
 

@@ -59,12 +59,14 @@
                 <input v-model.number="recordEvery" type="number" min="1" max="3600" />
               </label>
             </div>
+            <p class="hint">过程积分步长固定 1 s；记录间隔只影响趋势曲线采样，不改变仿真物理。</p>
             <label>
               随机种子
               <input v-model.number="seed" type="number" />
             </label>
             <div class="presets">
               <button type="button" @click="applyPreset(1, 0.25)">预览 1 h</button>
+              <button type="button" @click="applyPreset(3, 0.5)">训练 3 h</button>
               <button type="button" @click="applyPreset(8, 2)">短跑 8 h</button>
               <button type="button" @click="applyPreset(48, 8)">标准 48 h</button>
             </div>
@@ -95,7 +97,10 @@
               <label v-for="d in group.items" :key="d.n" class="idv">
                 <input v-model="idvOn[d.n]" type="checkbox" />
                 <span class="idv-n">{{ String(d.n).padStart(2, "0") }}</span>
-                <span class="idv-body">{{ d.name_zh }}</span>
+                <span class="idv-body">
+                  {{ d.name_zh }}
+                  <span v-if="d.mechanism_zh" class="idv-mech">{{ d.mechanism_zh }}</span>
+                </span>
                 <input
                   v-model.number="idvHour[d.n]"
                   class="hour"
@@ -1043,6 +1048,15 @@ select {
 .idv-body {
   font-size: 0.74rem;
   color: var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+.idv-mech {
+  font-size: 0.66rem;
+  color: var(--ink-soft);
+  line-height: 1.25;
 }
 .hour {
   width: 3.8rem;

@@ -1,4 +1,4 @@
-//! Open-loop demonstration from `temain.f`: one stripper-level PI loop.
+//! Open-loop demonstration from `archive/temain.f`: one stripper-level PI loop.
 
 use crate::process::TennesseeEastmanProcess;
 

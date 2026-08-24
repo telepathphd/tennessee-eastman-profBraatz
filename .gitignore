@@ -1,0 +1,23 @@
+# Rust
+/rust/target/
+/rust/target-test/
+
+# Vue
+/web/node_modules/
+/web/dist/
+
+# Replica CLI dumps (`temain_mod --output .`)
+TE_data_*.dat
+/rust/tmp_out/
+
+# Archived Fortran: compile leftovers, not sources or d*.dat
+/archive/a.out
+/archive/*.exe
+/archive/*.o
+/archive/*.obj
+/archive/*.mod
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

@@ -9,7 +9,7 @@ use serde::Serialize;
 use crate::closed_loop::PlantWideController;
 use crate::process::{default_delta_t, DEFAULT_RNG_SEED, N_IDV, N_XMEAS, N_XMV};
 
-#[derive(Clone, Copy, Debug, Serialize)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IdvKind {
     Step,
@@ -45,6 +45,9 @@ pub struct IdvMeta {
     pub name_zh: &'static str,
     pub kind: IdvKind,
     pub kind_zh: &'static str,
+    /// Wired effect in `TEFUNC` (empty for IDV 1–15). IDV 16–20 stay named Unknown in the paper.
+    pub mechanism_en: &'static str,
+    pub mechanism_zh: &'static str,
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -474,6 +477,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 4 的 A/C 比阶跃，B 含量不变",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             2,
@@ -481,6 +486,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 4 的 B 含量阶跃，A/C 比不变",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             3,
@@ -488,6 +495,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 2（D）进料温度阶跃",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             4,
@@ -495,6 +504,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "反应器冷却水入口温度阶跃",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             5,
@@ -502,6 +513,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "冷凝器冷却水入口温度阶跃",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             6,
@@ -509,6 +522,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 1（A）进料损失",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             7,
@@ -516,6 +531,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 4 的 C 进料压力损失",
             IdvKind::Step,
             "阶跃",
+            "",
+            "",
         ),
         (
             8,
@@ -523,6 +540,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 4 的 A/B/C 组成随机变化",
             IdvKind::RandomVariation,
             "随机变化",
+            "",
+            "",
         ),
         (
             9,
@@ -530,6 +549,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 2（D）进料温度随机变化",
             IdvKind::RandomVariation,
             "随机变化",
+            "",
+            "",
         ),
         (
             10,
@@ -537,6 +558,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "物流 4（C）进料温度随机变化",
             IdvKind::RandomVariation,
             "随机变化",
+            "",
+            "",
         ),
         (
             11,
@@ -544,6 +567,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "反应器冷却水入口温度随机变化",
             IdvKind::RandomVariation,
             "随机变化",
+            "",
+            "",
         ),
         (
             12,
@@ -551,6 +576,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "冷凝器冷却水入口温度随机变化",
             IdvKind::RandomVariation,
             "随机变化",
+            "",
+            "",
         ),
         (
             13,
@@ -558,6 +585,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "反应动力学缓慢漂移",
             IdvKind::SlowDrift,
             "缓慢漂移",
+            "",
+            "",
         ),
         (
             14,
@@ -565,6 +594,8 @@ fn idv_meta() -> Vec<IdvMeta> {
             "反应器冷却水阀门卡涩",
             IdvKind::Sticking,
             "卡涩",
+            "",
+            "",
         ),
         (
             15,
@@ -572,21 +603,67 @@ fn idv_meta() -> Vec<IdvMeta> {
             "冷凝器冷却水阀门卡涩",
             IdvKind::Sticking,
             "卡涩",
+            "",
+            "",
         ),
-        (16, "Unknown", "未知", IdvKind::Unknown, "未知"),
-        (17, "Unknown", "未知", IdvKind::Unknown, "未知"),
-        (18, "Unknown", "未知", IdvKind::Unknown, "未知"),
-        (19, "Unknown", "未知", IdvKind::Unknown, "未知"),
-        (20, "Unknown", "未知", IdvKind::Unknown, "未知"),
+        (
+            16,
+            "Unknown",
+            "未知",
+            IdvKind::Unknown,
+            "未知",
+            "Random variation on stripper steam (TESUB8 channel 9 → UAC)",
+            "汽提蒸汽随机变化（TESUB8 通道 9 → UAC）",
+        ),
+        (
+            17,
+            "Unknown",
+            "未知",
+            IdvKind::Unknown,
+            "未知",
+            "Random variation on reactor heat removal (TESUB8 channel 10 → QUR)",
+            "反应器移热随机变化（TESUB8 通道 10 → QUR）",
+        ),
+        (
+            18,
+            "Unknown",
+            "未知",
+            IdvKind::Unknown,
+            "未知",
+            "Random variation on separator heat removal (TESUB8 channel 11 → QUS)",
+            "分离器移热随机变化（TESUB8 通道 11 → QUS）",
+        ),
+        (
+            19,
+            "Unknown",
+            "未知",
+            IdvKind::Unknown,
+            "未知",
+            "Sticking on XMV(5,7,8,9): recycle, separator liquid, stripper liquid, steam",
+            "XMV(5,7,8,9) 卡涩：循环、分离器液、汽提液、蒸汽阀",
+        ),
+        (
+            20,
+            "Unknown",
+            "未知",
+            IdvKind::Unknown,
+            "未知",
+            "Random variation on reactor outlet flow (TESUB8 channel 12)",
+            "反应器出口流量随机变化（TESUB8 通道 12）",
+        ),
     ]
     .into_iter()
-    .map(|(n, name_en, name_zh, kind, kind_zh)| IdvMeta {
-        n,
-        name_en,
-        name_zh,
-        kind,
-        kind_zh,
-    })
+    .map(
+        |(n, name_en, name_zh, kind, kind_zh, mechanism_en, mechanism_zh)| IdvMeta {
+            n,
+            name_en,
+            name_zh,
+            kind,
+            kind_zh,
+            mechanism_en,
+            mechanism_zh,
+        },
+    )
     .collect()
 }
 
@@ -814,6 +891,17 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
 mod tests {
     use super::*;
     use std::collections::HashSet;
+
+    #[test]
+    fn unknown_idv_have_mechanism_text() {
+        let c = catalog();
+        for d in c.idv.iter().filter(|d| d.n >= 16) {
+            assert!(!d.mechanism_en.is_empty(), "IDV({}) mechanism_en", d.n);
+            assert!(!d.mechanism_zh.is_empty(), "IDV({}) mechanism_zh", d.n);
+            assert_eq!(d.name_en, "Unknown");
+            assert_eq!(d.kind, IdvKind::Unknown);
+        }
+    }
 
     #[test]
     fn dcs_tags_unique_and_complete() {

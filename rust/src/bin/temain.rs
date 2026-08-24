@@ -1,4 +1,4 @@
-//! Open-loop demonstration (`temain.f`).
+//! Open-loop demonstration (`archive/temain.f`).
 
 use tennessee_eastman::{default_delta_t, StripperLevelController, TennesseeEastmanProcess};
 

@@ -166,16 +166,14 @@ fn run_closed(
         for &(n, value) in &held {
             ctrl.setpt[n - 1] = value;
         }
-        if i % record_every == 0 {
-            rec.push(i as u32, process);
+        if should_record_step(i, record_every, &req.injections) {
+            rec.push_if_new(i as u32, process);
         }
         process.integrate(dt);
         ctrl.constrain_hand(process);
         if process.is_shutdown() {
             rec.note_shutdown(i as u32, process);
-            if i % record_every != 0 {
-                rec.push(i as u32, process);
-            }
+            rec.push_if_new(i as u32, process);
             break;
         }
     }
@@ -204,15 +202,13 @@ fn run_open(
     for i in 1..=req.npts {
         apply_injections(process, &req.injections, i);
         ctrl.apply(process, dt);
-        if i % record_every == 0 {
-            rec.push(i as u32, process);
+        if should_record_step(i, record_every, &req.injections) {
+            rec.push_if_new(i as u32, process);
         }
         process.integrate(dt);
         if process.is_shutdown() {
             rec.note_shutdown(i as u32, process);
-            if i % record_every != 0 {
-                rec.push(i as u32, process);
-            }
+            rec.push_if_new(i as u32, process);
             break;
         }
     }
@@ -226,6 +222,13 @@ fn apply_injections(process: &mut TennesseeEastmanProcess, injections: &[Injecti
             process.set_idv(inj.idv, true);
         }
     }
+}
+
+fn should_record_step(step: usize, record_every: usize, injections: &[Injection]) -> bool {
+    if step % record_every == 0 {
+        return true;
+    }
+    injections.iter().any(|inj| inj.start_step == step)
 }
 
 struct Recorder {
@@ -273,6 +276,13 @@ impl Recorder {
         }
     }
 
+    fn push_if_new(&mut self, t: u32, process: &TennesseeEastmanProcess) {
+        if self.time_s.last().copied() == Some(t) {
+            return;
+        }
+        self.push(t, process);
+    }
+
     fn note_shutdown(&mut self, t: u32, process: &TennesseeEastmanProcess) {
         self.shutdown = true;
         self.shutdown_time_s = Some(t);
@@ -309,6 +319,30 @@ impl Recorder {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn injection_start_step_is_always_recorded() {
+        let req = SimulationRequest {
+            mode: SimMode::ClosedLoop,
+            npts: 600,
+            record_every: 100,
+            seed: DEFAULT_RNG_SEED,
+            setpoints: BTreeMap::new(),
+            held_setpoints: Vec::new(),
+            injections: vec![Injection {
+                idv: 12,
+                start_step: 300,
+            }],
+            open_loop_xmv: BTreeMap::new(),
+            open_loop_stripper_sp: None,
+        };
+        let out = run(&req).expect("sim");
+        assert!(
+            out.time_s.contains(&300),
+            "injection at step 300 must be recorded: {:?}",
+            out.time_s
+        );
+    }
 
     #[test]
     fn closed_loop_records_t0_and_grid() {

@@ -19,6 +19,7 @@ _Avoid_: input, actuator, MV (spell it out in prose)
 **Disturbance**:
 One of the twenty `IDV(n)` flags in the process: step, random variation, slow drift, sticking, or unknown.
 _Avoid_: fault, accident, noise (measurement noise is separate)
+_Note_: `IDV(16..20)` are published as unknown for FDD; `TEFUNC` still wires hidden mechanisms (stripper steam, heat removal, valve sticking, reactor outlet flow).
 
 **Injection**:
 Turning a Disturbance on at a chosen simulation step. The operator action; the flag is still a Disturbance.

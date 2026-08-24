@@ -11,7 +11,7 @@ export const LIMITS = {
     scaleLo: 0,
     scaleHi: 100,
     loOp: 50,
-    hiOp: 75,
+    hiOp: 100,
   },
   9: {
     scaleLo: 100,
@@ -29,7 +29,6 @@ export const LIMITS = {
     scaleLo: 2400,
     scaleHi: 3000,
     hiOp: 2895,
-    hiShutdown: 3000,
   },
   15: {
     scaleLo: 0,

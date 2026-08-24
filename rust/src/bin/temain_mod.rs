@@ -1,4 +1,4 @@
-//! Closed-loop demonstration (`temain_mod.f`).
+//! Closed-loop demonstration (`archive/temain_mod.f`).
 
 use std::fs::File;
 use std::io::{BufWriter, Write};

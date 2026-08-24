@@ -1,6 +1,6 @@
 use tennessee_eastman::{
-    default_delta_t, ClosedLoopConfig, PlantWideController, TennesseeEastmanProcess,
-    DEFAULT_RNG_SEED, N_STATES,
+    default_delta_t, interlock_reasons, ClosedLoopConfig, PlantWideController,
+    TennesseeEastmanProcess, DEFAULT_RNG_SEED, N_STATES,
 };
 
 const YY0: [f64; N_STATES] = [
@@ -152,5 +152,165 @@ fn closed_loop_short_run_stays_near_base_case() {
     assert!(
         (t - 120.4).abs() < 5.0,
         "reactor temperature drifted too far: {t}"
+    );
+}
+
+#[test]
+fn teinit_tesub2_converges_at_base_case() {
+    let mut p = TennesseeEastmanProcess::new();
+    p.teinit();
+    assert_eq!(p.tesub2_failures, 0, "TESUB2 should converge at TEINIT");
+}
+
+#[test]
+fn interlock_trips_on_reactor_pressure() {
+    let mut xmeas = [0.0; 41];
+    xmeas[6] = 3001.0;
+    let reasons = interlock_reasons(&xmeas, 100.0, 100.0, 100.0);
+    assert_eq!(reasons.len(), 1);
+    assert!(reasons[0].contains("压力"));
+}
+
+#[test]
+fn interlock_trips_on_liquid_inventory() {
+    let xmeas = [0.0; 41];
+    let high_reactor = interlock_reasons(&xmeas, 25.0 * 35.3145, 100.0, 100.0);
+    assert!(high_reactor.iter().any(|r| r.contains("反应器") && r.contains("过高")));
+    let low_sep = interlock_reasons(&xmeas, 100.0, 0.5 * 35.3145, 100.0);
+    assert!(low_sep.iter().any(|r| r.contains("分离器") && r.contains("过低")));
+}
+
+#[test]
+fn idv6_zeros_a_feed_flow() {
+    let mut p = TennesseeEastmanProcess::new();
+    p.teinit();
+    assert!(p.xmeas()[0] > 0.1, "baseline A feed {}", p.xmeas()[0]);
+    p.set_idv(6, true);
+    for _ in 0..20 {
+        p.integrate(default_delta_t());
+    }
+    assert!(
+        p.xmeas()[0] < 0.01,
+        "IDV(6) should shut A feed: {}",
+        p.xmeas()[0]
+    );
+}
+
+#[test]
+fn idv17_diverges_from_baseline_heat_removal() {
+    let dt = default_delta_t();
+    let steps = 14_400;
+
+    let mut base = TennesseeEastmanProcess::new();
+    base.teinit();
+
+    let mut disturbed = TennesseeEastmanProcess::new();
+    disturbed.teinit();
+    disturbed.set_idv(17, true);
+
+    for _ in 0..steps {
+        base.integrate(dt);
+        disturbed.integrate(dt);
+    }
+
+    assert!(
+        (base.xmeas()[8] - disturbed.xmeas()[8]).abs() > 0.5,
+        "IDV(17) should modulate reactor temperature in open loop: base={} disturbed={}",
+        base.xmeas()[8],
+        disturbed.xmeas()[8]
+    );
+}
+
+#[test]
+fn idv16_modulates_stripper_steam_duty() {
+    let dt = default_delta_t();
+    let steps = 14_400;
+    let mut base = TennesseeEastmanProcess::new();
+    base.teinit();
+    let mut disturbed = TennesseeEastmanProcess::new();
+    disturbed.teinit();
+    disturbed.set_idv(16, true);
+    for _ in 0..steps {
+        base.integrate(dt);
+        disturbed.integrate(dt);
+    }
+    assert!(
+        (base.xmeas()[18] - disturbed.xmeas()[18]).abs() > 1.0,
+        "IDV(16) should modulate stripper duty XMEAS(19): base={} disturbed={}",
+        base.xmeas()[18],
+        disturbed.xmeas()[18]
+    );
+}
+
+#[test]
+fn idv20_modulates_separator_pressure() {
+    let dt = default_delta_t();
+    let steps = 14_400;
+    let mut base = TennesseeEastmanProcess::new();
+    base.teinit();
+    let mut disturbed = TennesseeEastmanProcess::new();
+    disturbed.teinit();
+    disturbed.set_idv(20, true);
+    for _ in 0..steps {
+        base.integrate(dt);
+        disturbed.integrate(dt);
+    }
+    assert!(
+        (base.xmeas()[11] - disturbed.xmeas()[11]).abs() > 2.0,
+        "IDV(20) should move separator level XMEAS(12): base={} disturbed={}",
+        base.xmeas()[11],
+        disturbed.xmeas()[11]
+    );
+}
+
+#[test]
+fn idv19_small_valve_moves_stick() {
+    let dt = default_delta_t();
+    let mut free = TennesseeEastmanProcess::new();
+    free.teinit();
+    free.integrate(dt);
+    let nominal = free.xmv()[4];
+    free.set_xmv(5, nominal + 1.5);
+    free.tefunc();
+    free.integrate(dt);
+    let free_delta = (free.yy[42] - nominal).abs();
+
+    let mut stuck = TennesseeEastmanProcess::new();
+    stuck.teinit();
+    stuck.set_idv(19, true);
+    stuck.integrate(dt);
+    stuck.set_xmv(5, nominal + 1.5);
+    stuck.tefunc();
+    stuck.integrate(dt);
+    let stuck_delta = (stuck.yy[42] - nominal).abs();
+
+    assert!(
+        stuck_delta < free_delta,
+        "IDV(19) should stick valve 5: free_delta={free_delta} stuck_delta={stuck_delta}"
+    );
+}
+
+#[test]
+fn shutdown_freezes_derivatives() {
+    let dt = default_delta_t();
+    let mut p = TennesseeEastmanProcess::new();
+    p.teinit();
+    p.set_xmv(9, 0.0);
+    p.set_xmv(10, 0.0);
+    p.set_xmv(11, 100.0);
+    for _ in 0..80_000 {
+        p.integrate(dt);
+        if p.is_shutdown() {
+            break;
+        }
+    }
+    assert!(p.is_shutdown(), "expected shutdown with cooling removed");
+    assert!(!p.shutdown_reasons().is_empty());
+    let yy_at_trip = p.yy;
+    p.integrate(dt);
+    assert_eq!(p.yy, yy_at_trip, "state must freeze after shutdown");
+    assert!(
+        p.yp.iter().all(|&v| v == 0.0),
+        "derivatives must be zero when shutdown"
     );
 }

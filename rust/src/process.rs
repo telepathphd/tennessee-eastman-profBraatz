@@ -1,4 +1,4 @@
-//! Process model translated from `teprob.f`: `TEINIT`, `TEFUNC`, `TESUB1`–`TESUB8`.
+//! Process model translated from `archive/teprob.f`: `TEINIT`, `TEFUNC`, `TESUB1`–`TESUB8`.
 //!
 //! Arithmetic is IEEE-754 double throughout. Constants are taken as written in
 //! the Fortran source rather than rounded through default-kind `REAL`.
@@ -15,6 +15,46 @@ pub const DEFAULT_RNG_SEED: f64 = 4_651_207_995.0;
 /// Integrator step of 1 second, expressed in hours.
 pub fn default_delta_t() -> f64 {
     1.0 / 3600.0
+}
+
+const FT3_PER_M3: f64 = 35.3145;
+
+/// Shutdown interlock checks from `TEFUNC` (`ISD`). Shared by `tefunc` and [`TennesseeEastmanProcess::shutdown_reasons`].
+pub fn interlock_reasons(
+    xmeas: &[f64; N_XMEAS],
+    vlr: f64,
+    vls: f64,
+    vlc: f64,
+) -> Vec<&'static str> {
+    let mut reasons = Vec::new();
+    if xmeas[6] > 3000.0 {
+        reasons.push("反应器压力超过 3000 kPa（表压）");
+    }
+    let vlr_m3 = vlr / FT3_PER_M3;
+    if vlr_m3 > 24.0 {
+        reasons.push("反应器液体持液量过高");
+    }
+    if vlr_m3 < 2.0 {
+        reasons.push("反应器液体持液量过低");
+    }
+    if xmeas[8] > 175.0 {
+        reasons.push("反应器温度超过 175 °C");
+    }
+    let vls_m3 = vls / FT3_PER_M3;
+    if vls_m3 > 12.0 {
+        reasons.push("分离器液体持液量过高");
+    }
+    if vls_m3 < 1.0 {
+        reasons.push("分离器液体持液量过低");
+    }
+    let vlc_m3 = vlc / FT3_PER_M3;
+    if vlc_m3 > 8.0 {
+        reasons.push("汽提塔液体持液量过高");
+    }
+    if vlc_m3 < 1.0 {
+        reasons.push("汽提塔液体持液量过低");
+    }
+    reasons
 }
 
 #[derive(Clone, Debug)]
@@ -146,6 +186,8 @@ pub struct TennesseeEastmanProcess {
     szero: [f64; 12],
     spspan: [f64; 12],
     idvwlk: [i32; 12],
+    /// Count of `TESUB2` Newton iterations that fell back without converging (diagnostic only).
+    pub tesub2_failures: u64,
 }
 
 impl Default for TennesseeEastmanProcess {
@@ -281,6 +323,7 @@ impl TennesseeEastmanProcess {
             szero: [0.0; 12],
             spspan: [0.0; 12],
             idvwlk: [0; 12],
+            tesub2_failures: 0,
         }
     }
 
@@ -318,32 +361,10 @@ impl TennesseeEastmanProcess {
 
     /// Interlock trips from `TEFUNC` (`ISD`). Empty when the plant is running.
     pub fn shutdown_reasons(&self) -> Vec<&'static str> {
-        let mut reasons = Vec::new();
-        if self.xmeas[6] > 3000.0 {
-            reasons.push("Reactor pressure exceeds 3000 kPa gauge");
+        if self.isd == 0 {
+            return Vec::new();
         }
-        if self.vlr / 35.3145 > 24.0 {
-            reasons.push("Reactor liquid volume high");
-        }
-        if self.vlr / 35.3145 < 2.0 {
-            reasons.push("Reactor liquid volume low");
-        }
-        if self.xmeas[8] > 175.0 {
-            reasons.push("Reactor temperature exceeds 175 °C");
-        }
-        if self.vls / 35.3145 > 12.0 {
-            reasons.push("Separator liquid volume high");
-        }
-        if self.vls / 35.3145 < 1.0 {
-            reasons.push("Separator liquid volume low");
-        }
-        if self.vlc / 35.3145 > 8.0 {
-            reasons.push("Stripper liquid volume high");
-        }
-        if self.vlc / 35.3145 < 1.0 {
-            reasons.push("Stripper liquid volume low");
-        }
-        reasons
+        interlock_reasons(&self.xmeas, self.vlr, self.vls, self.vlc)
     }
 
     /// Observation vector used by the training/testing `.dat` files:
@@ -935,28 +956,8 @@ impl TennesseeEastmanProcess {
         self.xmeas[21] = self.tws;
 
         self.isd = 0;
-        if self.xmeas[6] > 3000.0 {
-            self.isd = 1;
-        }
-        if self.vlr / 35.3145 > 24.0 {
-            self.isd = 1;
-        }
-        if self.vlr / 35.3145 < 2.0 {
-            self.isd = 1;
-        }
-        if self.xmeas[8] > 175.0 {
-            self.isd = 1;
-        }
-        if self.vls / 35.3145 > 12.0 {
-            self.isd = 1;
-        }
-        if self.vls / 35.3145 < 1.0 {
-            self.isd = 1;
-        }
-        if self.vlc / 35.3145 > 8.0 {
-            self.isd = 1;
-        }
-        if self.vlc / 35.3145 < 1.0 {
+        let reasons = interlock_reasons(&self.xmeas, self.vlr, self.vls, self.vlc);
+        if !reasons.is_empty() {
             self.isd = 1;
         }
         if self.time > 0.0 && self.isd == 0 {
@@ -1086,7 +1087,7 @@ impl TennesseeEastmanProcess {
         h
     }
 
-    fn tesub2(&self, z: &[f64; 8], t: &mut f64, h: f64, ity: i32) {
+    fn tesub2(&mut self, z: &[f64; 8], t: &mut f64, h: f64, ity: i32) {
         let tin = *t;
         for _ in 0..100 {
             let htest = self.tesub1(z, *t, ity);
@@ -1099,6 +1100,7 @@ impl TennesseeEastmanProcess {
             }
         }
         *t = tin;
+        self.tesub2_failures += 1;
     }
 
     fn tesub3(&self, z: &[f64; 8], t: f64, ity: i32) -> f64 {
