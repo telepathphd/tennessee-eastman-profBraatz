@@ -63,7 +63,7 @@ where `XMEAS(n)`is the n-th measured variable and `XMV(n)` is the n-th manipulat
 
 ## Rust replica (`rust/`)
 
-`rust/` is a Rust equivalent of `teprob.f`, `temain.f`, and `temain_mod.f`. COMMON blocks become `TennesseeEastmanProcess`; `TEINIT` / `TEFUNC` / `TESUBi` keep the original equations, including Fortran `REAL` constant rounding and the `TESUB7` LCG.
+`rust/` is a Rust equivalent of `teprob.f`, `temain.f`, and `temain_mod.f`. COMMON blocks become `TennesseeEastmanProcess`. `TEINIT` / `TEFUNC` / `TESUBi` keep the original equations in IEEE-754 double (constants as written, not Fortran default-kind `REAL` rounding). The `TESUB7` LCG is kept so measurement noise and random-variation disturbances stay reproducible. Trajectories are not bit-identical to gfortran dumps.
 
 ```bash
 cd rust

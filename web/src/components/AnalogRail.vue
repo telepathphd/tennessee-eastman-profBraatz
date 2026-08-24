@@ -1,6 +1,5 @@
 <template>
   <aside class="rail">
-    <h2>关键变量</h2>
     <button
       v-for="item in items"
       :key="item.key"
@@ -54,21 +53,12 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  padding: 0.45rem 0.4rem 0.6rem;
+  padding: 0.35rem 0.4rem 0.55rem;
   background: var(--panel);
-  border-left: 1px solid var(--rule);
   min-height: 0;
   overflow: auto;
   height: 100%;
   flex: 1;
-}
-h2 {
-  margin: 0 0 0.2rem;
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
 }
 .kpi {
   display: grid;

@@ -42,6 +42,17 @@ select:focus-visible {
   outline-offset: 2px;
 }
 
+body.sash-col,
+body.sash-col * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+body.sash-row,
+body.sash-row * {
+  cursor: row-resize !important;
+  user-select: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

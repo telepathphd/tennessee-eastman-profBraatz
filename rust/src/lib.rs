@@ -3,6 +3,8 @@
 //!
 //! COMMON blocks are owned by [`TennesseeEastmanProcess`]. Indexing in the
 //! public API is **1-based**, matching `XMEAS(n)`, `XMV(n)`, and `IDV(n)`.
+//! Arithmetic is IEEE-754 double; it does not emulate Fortran default-kind
+//! `REAL` rounding of unsuffixed literals.
 
 pub mod catalog;
 pub mod closed_loop;

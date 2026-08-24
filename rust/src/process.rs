@@ -1,10 +1,7 @@
 //! Process model translated from `teprob.f`: `TEINIT`, `TEFUNC`, `TESUB1`–`TESUB8`.
 //!
-//! Unsuffixed Fortran `REAL` literals are converted through `f32` (`sp`) so that
-//! initialization matches gfortran's default-kind constants stored in
-//! `DOUBLE PRECISION` COMMON / dummy arguments.
-
-#![allow(clippy::excessive_precision)]
+//! Arithmetic is IEEE-754 double throughout. Constants are taken as written in
+//! the Fortran source rather than rounded through default-kind `REAL`.
 
 pub const N_STATES: usize = 50;
 pub const N_XMEAS: usize = 41;
@@ -15,14 +12,9 @@ pub const N_STREAMS: usize = 13;
 pub const OBSERVATION_LEN: usize = N_XMEAS + 11;
 pub const DEFAULT_RNG_SEED: f64 = 4_651_207_995.0;
 
-/// Fortran `DELTAT = 1. / 3600.` — `REAL` divide assigned to `DOUBLE PRECISION`.
+/// Integrator step of 1 second, expressed in hours.
 pub fn default_delta_t() -> f64 {
-    f64::from(1.0f32 / 3600.0f32)
-}
-
-#[inline]
-fn sp(x: f32) -> f64 {
-    f64::from(x)
+    1.0 / 3600.0
 }
 
 #[derive(Clone, Debug)]
@@ -365,75 +357,14 @@ impl TennesseeEastmanProcess {
 
     /// `TEINIT` then one `TEFUNC` at `TIME = 0`.
     pub fn teinit(&mut self) {
-        self.xmw = [
-            sp(2.0),
-            sp(25.4),
-            sp(28.0),
-            sp(32.0),
-            sp(46.0),
-            sp(48.0),
-            sp(62.0),
-            sp(76.0),
-        ];
-        self.avp = [
-            0.0,
-            0.0,
-            0.0,
-            sp(15.92),
-            sp(16.35),
-            sp(16.35),
-            sp(16.43),
-            sp(17.21),
-        ];
-        self.bvp = [
-            0.0,
-            0.0,
-            0.0,
-            sp(-1444.0),
-            sp(-2114.0),
-            sp(-2114.0),
-            sp(-2748.0),
-            sp(-3318.0),
-        ];
-        self.cvp = [
-            0.0,
-            0.0,
-            0.0,
-            sp(259.0),
-            sp(265.5),
-            sp(265.5),
-            sp(232.9),
-            sp(249.6),
-        ];
-        self.ad = [
-            sp(1.0),
-            sp(1.0),
-            sp(1.0),
-            sp(23.3),
-            sp(33.9),
-            sp(32.8),
-            sp(49.9),
-            sp(50.5),
-        ];
-        self.bd = [
-            0.0,
-            0.0,
-            0.0,
-            sp(-0.0700),
-            sp(-0.0957),
-            sp(-0.0995),
-            sp(-0.0191),
-            sp(-0.0541),
-        ];
+        self.xmw = [2.0, 25.4, 28.0, 32.0, 46.0, 48.0, 62.0, 76.0];
+        self.avp = [0.0, 0.0, 0.0, 15.92, 16.35, 16.35, 16.43, 17.21];
+        self.bvp = [0.0, 0.0, 0.0, -1444.0, -2114.0, -2114.0, -2748.0, -3318.0];
+        self.cvp = [0.0, 0.0, 0.0, 259.0, 265.5, 265.5, 232.9, 249.6];
+        self.ad = [1.0, 1.0, 1.0, 23.3, 33.9, 32.8, 49.9, 50.5];
+        self.bd = [0.0, 0.0, 0.0, -0.0700, -0.0957, -0.0995, -0.0191, -0.0541];
         self.cd = [
-            0.0,
-            0.0,
-            0.0,
-            sp(-0.0002),
-            sp(-0.000152),
-            sp(-0.000233),
-            sp(-0.000425),
-            sp(-0.000150),
+            0.0, 0.0, 0.0, -0.0002, -0.000152, -0.000233, -0.000425, -0.000150,
         ];
         self.ah = [
             1.0e-6, 1.0e-6, 1.0e-6, 0.960e-6, 0.573e-6, 0.652e-6, 0.515e-6, 0.471e-6,
@@ -456,56 +387,56 @@ impl TennesseeEastmanProcess {
         ];
 
         self.yy = [
-            sp(10.40491389),
-            sp(4.363996017),
-            sp(7.570059737),
-            sp(0.4230042431),
-            sp(24.15513437),
-            sp(2.942597645),
-            sp(154.3770655),
-            sp(159.1865960),
-            sp(2.808522723),
-            sp(63.75581199),
-            sp(26.74026066),
-            sp(46.38532432),
-            sp(0.2464521543),
-            sp(15.20484404),
-            sp(1.852266172),
-            sp(52.44639459),
-            sp(41.20394008),
-            sp(0.5699317760),
-            sp(0.4306056376),
+            10.40491389,
+            4.363996017,
+            7.570059737,
+            0.4230042431,
+            24.15513437,
+            2.942597645,
+            154.3770655,
+            159.1865960,
+            2.808522723,
+            63.75581199,
+            26.74026066,
+            46.38532432,
+            0.2464521543,
+            15.20484404,
+            1.852266172,
+            52.44639459,
+            41.20394008,
+            0.5699317760,
+            0.4306056376,
             7.9906200783e-3,
-            sp(0.9056036089),
+            0.9056036089,
             1.6054258216e-2,
-            sp(0.7509759687),
+            0.7509759687,
             8.8582855955e-2,
-            sp(48.27726193),
-            sp(39.38459028),
-            sp(0.3755297257),
-            sp(107.7562698),
-            sp(29.77250546),
-            sp(88.32481135),
-            sp(23.03929507),
-            sp(62.85848794),
-            sp(5.546318688),
-            sp(11.92244772),
-            sp(5.555448243),
-            sp(0.9218489762),
-            sp(94.59927549),
-            sp(77.29698353),
-            sp(63.05263039),
-            sp(53.97970677),
-            sp(24.64355755),
-            sp(61.30192144),
-            sp(22.21000000),
-            sp(40.06374673),
-            sp(38.10034370),
-            sp(46.53415582),
-            sp(47.44573456),
-            sp(41.10581288),
-            sp(18.11349055),
-            sp(50.00000000),
+            48.27726193,
+            39.38459028,
+            0.3755297257,
+            107.7562698,
+            29.77250546,
+            88.32481135,
+            23.03929507,
+            62.85848794,
+            5.546318688,
+            11.92244772,
+            5.555448243,
+            0.9218489762,
+            94.59927549,
+            77.29698353,
+            63.05263039,
+            53.97970677,
+            24.64355755,
+            61.30192144,
+            22.21000000,
+            40.06374673,
+            38.10034370,
+            46.53415582,
+            47.44573456,
+            41.10581288,
+            18.11349055,
+            50.00000000,
         ];
 
         for i in 0..12 {
@@ -515,62 +446,42 @@ impl TennesseeEastmanProcess {
             self.ivst[i] = 0;
         }
 
-        self.vrng[0] = sp(400.00);
-        self.vrng[1] = sp(400.00);
-        self.vrng[2] = sp(100.00);
-        self.vrng[3] = sp(1500.00);
-        self.vrng[6] = sp(1500.00);
-        self.vrng[7] = sp(1000.00);
-        self.vrng[8] = sp(0.03);
-        self.vrng[9] = sp(1000.);
-        self.vrng[10] = sp(1200.0);
+        self.vrng[0] = 400.00;
+        self.vrng[1] = 400.00;
+        self.vrng[2] = 100.00;
+        self.vrng[3] = 1500.00;
+        self.vrng[6] = 1500.00;
+        self.vrng[7] = 1000.00;
+        self.vrng[8] = 0.03;
+        self.vrng[9] = 1000.;
+        self.vrng[10] = 1200.0;
 
-        self.vtr = sp(1300.0);
-        self.vts = sp(3500.0);
-        self.vtc = sp(156.5);
-        self.vtv = sp(5000.0);
+        self.vtr = 1300.0;
+        self.vts = 3500.0;
+        self.vtc = 156.5;
+        self.vtv = 5000.0;
         self.htr[0] = 0.06899381054;
         self.htr[1] = 0.05;
-        self.hwr = sp(7060.);
-        self.hws = sp(11138.);
+        self.hwr = 7060.;
+        self.hws = 11138.;
         self.sfr = [
-            sp(0.99500),
-            sp(0.99100),
-            sp(0.99000),
-            sp(0.91600),
-            sp(0.93600),
-            sp(0.93800),
-            5.80000e-2,
-            3.01000e-2,
+            0.99500, 0.99100, 0.99000, 0.91600, 0.93600, 0.93800, 5.80000e-2, 3.01000e-2,
         ];
 
-        self.xst[0] = [0.0, sp(0.0001), 0.0, sp(0.9999), 0.0, 0.0, 0.0, 0.0];
-        self.tst[0] = sp(45.);
-        self.xst[1] = [0.0, 0.0, 0.0, 0.0, sp(0.9999), sp(0.0001), 0.0, 0.0];
-        self.tst[1] = sp(45.);
-        self.xst[2] = [sp(0.9999), sp(0.0001), 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
-        self.tst[2] = sp(45.);
-        self.xst[3] = [sp(0.4850), sp(0.0050), sp(0.5100), 0.0, 0.0, 0.0, 0.0, 0.0];
-        self.tst[3] = sp(45.);
+        self.xst[0] = [0.0, 0.0001, 0.0, 0.9999, 0.0, 0.0, 0.0, 0.0];
+        self.tst[0] = 45.;
+        self.xst[1] = [0.0, 0.0, 0.0, 0.0, 0.9999, 0.0001, 0.0, 0.0];
+        self.tst[1] = 45.;
+        self.xst[2] = [0.9999, 0.0001, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0];
+        self.tst[2] = 45.;
+        self.xst[3] = [0.4850, 0.0050, 0.5100, 0.0, 0.0, 0.0, 0.0, 0.0];
+        self.tst[3] = 45.;
 
-        self.cpflmx = sp(280275.);
-        self.cpprmx = sp(1.3);
-        self.vtau = [
-            sp(8.),
-            sp(8.),
-            sp(6.),
-            sp(9.),
-            sp(7.),
-            sp(5.),
-            sp(5.),
-            sp(5.),
-            sp(120.),
-            sp(5.),
-            sp(5.),
-            sp(5.),
-        ];
+        self.cpflmx = 280275.;
+        self.cpprmx = 1.3;
+        self.vtau = [8., 8., 6., 9., 7., 5., 5., 5., 120., 5., 5., 5.];
         for v in &mut self.vtau {
-            *v /= sp(3600.);
+            *v /= 3600.0;
         }
 
         self.xns = [
@@ -757,13 +668,13 @@ impl TennesseeEastmanProcess {
         let mut t = self.tcr;
         self.tesub2(&z, &mut t, self.esr, 0);
         self.tcr = t;
-        self.tkr = self.tcr + sp(273.15);
+        self.tkr = self.tcr + 273.15;
 
         let z = self.xls;
         let mut t = self.tcs;
         self.tesub2(&z, &mut t, self.ess, 0);
         self.tcs = t;
-        self.tks = self.tcs + sp(273.15);
+        self.tks = self.tcs + 273.15;
 
         let z = self.xlc;
         let mut t = self.tcc;
@@ -774,7 +685,7 @@ impl TennesseeEastmanProcess {
         let mut t = self.tcv;
         self.tesub2(&z, &mut t, self.esv, 2);
         self.tcv = t;
-        self.tkv = self.tcv + sp(273.15);
+        self.tkv = self.tcv + 273.15;
 
         self.dlr = self.tesub4(&self.xlr, self.tcr);
         self.dls = self.tesub4(&self.xls, self.tcs);
@@ -785,7 +696,7 @@ impl TennesseeEastmanProcess {
         self.vvr = self.vtr - self.vlr;
         self.vvs = self.vts - self.vls;
 
-        let rg = sp(998.9);
+        let rg = 998.9;
         self.ptr = 0.0;
         self.pts = 0.0;
         for i in 0..3 {
@@ -814,14 +725,13 @@ impl TennesseeEastmanProcess {
             self.ucvs[i] = self.utvs * self.xvs[i];
         }
 
-        // Fortran: DEXP(a - e / r / TKR) with REAL a,e,r then mixed-mode /TKR.
-        self.rr[0] = (sp(31.5859536) - f64::from(40000.0f32 / 1.987f32) / self.tkr).exp() * r1f;
-        self.rr[1] = (sp(3.00094014) - f64::from(20000.0f32 / 1.987f32) / self.tkr).exp() * r2f;
-        self.rr[2] = (sp(53.4060443) - f64::from(60000.0f32 / 1.987f32) / self.tkr).exp();
+        self.rr[0] = (31.5859536 - 40000.0 / 1.987 / self.tkr).exp() * r1f;
+        self.rr[1] = (3.00094014 - 20000.0 / 1.987 / self.tkr).exp() * r2f;
+        self.rr[2] = (53.4060443 - 60000.0 / 1.987 / self.tkr).exp();
         self.rr[3] = self.rr[2] * 0.767488334;
         if self.ppr[0] > 0.0 && self.ppr[2] > 0.0 {
-            r1f = self.ppr[0].powf(sp(1.1544));
-            r2f = self.ppr[2].powf(sp(0.3735));
+            r1f = self.ppr[0].powf(1.1544);
+            r2f = self.ppr[2].powf(0.3735);
             self.rr[0] *= r1f * r2f * self.ppr[3];
             self.rr[1] *= r1f * r2f * self.ppr[4];
         } else {
@@ -936,24 +846,24 @@ impl TennesseeEastmanProcess {
 
         if self.ftm[10] > 0.1 {
             let tmpfac = if self.tcc > 170.0 {
-                self.tcc - sp(120.262)
-            } else if self.tcc < sp(5.292) {
+                self.tcc - 120.262
+            } else if self.tcc < 5.292 {
                 0.1
             } else {
-                sp(363.744) / (sp(177.) - self.tcc) - sp(2.22579488)
+                363.744 / (177. - self.tcc) - 2.22579488
             };
             let vovrl = self.ftm[3] / self.ftm[10] * tmpfac;
-            self.sfr[3] = sp(8.5010) * vovrl / (1.0 + sp(8.5010) * vovrl);
-            self.sfr[4] = sp(11.402) * vovrl / (1.0 + sp(11.402) * vovrl);
-            self.sfr[5] = sp(11.795) * vovrl / (1.0 + sp(11.795) * vovrl);
-            self.sfr[6] = sp(0.0480) * vovrl / (1.0 + sp(0.0480) * vovrl);
-            self.sfr[7] = sp(0.0242) * vovrl / (1.0 + sp(0.0242) * vovrl);
+            self.sfr[3] = 8.5010 * vovrl / (1.0 + 8.5010 * vovrl);
+            self.sfr[4] = 11.402 * vovrl / (1.0 + 11.402 * vovrl);
+            self.sfr[5] = 11.795 * vovrl / (1.0 + 11.795 * vovrl);
+            self.sfr[6] = 0.0480 * vovrl / (1.0 + 0.0480 * vovrl);
+            self.sfr[7] = 0.0242 * vovrl / (1.0 + 0.0242 * vovrl);
         } else {
-            self.sfr[3] = sp(0.9999);
-            self.sfr[4] = sp(0.999);
-            self.sfr[5] = sp(0.999);
-            self.sfr[6] = sp(0.99);
-            self.sfr[7] = sp(0.98);
+            self.sfr[3] = 0.9999;
+            self.sfr[4] = 0.999;
+            self.sfr[5] = 0.999;
+            self.sfr[6] = 0.99;
+            self.sfr[7] = 0.98;
         }
 
         let mut fin = [0.0; 8];
@@ -985,18 +895,16 @@ impl TennesseeEastmanProcess {
             self.fcm[6][i] = self.fcm[5][i];
         }
 
-        let uarlev = if self.vlr / sp(7.8) > sp(50.0) {
+        let uarlev = if self.vlr / 7.8 > 50.0 {
             1.0
-        } else if self.vlr / sp(7.8) < sp(10.0) {
+        } else if self.vlr / 7.8 < 10.0 {
             0.0
         } else {
-            sp(0.025) * self.vlr / sp(7.8) - sp(0.25)
+            0.025 * self.vlr / 7.8 - 0.25
         };
-        self.uar = uarlev
-            * (sp(-0.5) * self.agsp * self.agsp + sp(2.75) * self.agsp - sp(2.5))
-            * 855490.0e-6;
+        self.uar = uarlev * (-0.5 * self.agsp * self.agsp + 2.75 * self.agsp - 2.5) * 855490.0e-6;
         self.qur = self.uar * (self.twr - self.tcr) * (1.0 - 0.35 * self.tesub8(9, time));
-        let uas = sp(0.404655) * (1.0 - 1.0 / (1.0 + (self.ftm[7] / sp(3528.73)).powi(4)));
+        let uas = 0.404655 * (1.0 - 1.0 / (1.0 + (self.ftm[7] / 3528.73).powi(4)));
         self.qus = uas * (self.tws - self.tst[7]) * (1.0 - 0.25 * self.tesub8(10, time));
         self.quc = 0.0;
         if self.tcc < 100.0 {
@@ -1022,7 +930,6 @@ impl TennesseeEastmanProcess {
         self.xmeas[16] = self.ftm[12] / self.dlc / 35.3145;
         self.xmeas[17] = self.tcc;
         self.xmeas[18] = self.quc * 1.04e3 * 0.454;
-        self.xmeas[19] = self.cpdh * 0.0003927e6;
         self.xmeas[19] = self.cpdh * 0.29307e3;
         self.xmeas[20] = self.twr;
         self.xmeas[21] = self.tws;
@@ -1131,10 +1038,10 @@ impl TennesseeEastmanProcess {
             + self.hst[4] * self.ftm[4]
             + self.hst[8] * self.ftm[8]
             - self.hst[5] * self.ftm[5];
-        self.yp[36] = (self.fwr * sp(500.53) * (self.tcwr - self.twr) - self.qur * 1.0e6 / sp(1.8))
-            / self.hwr;
-        self.yp[37] = (self.fws * sp(500.53) * (self.tcws - self.tws) - self.qus * 1.0e6 / sp(1.8))
-            / self.hws;
+        self.yp[36] =
+            (self.fwr * 500.53 * (self.tcwr - self.twr) - self.qur * 1.0e6 / 1.8) / self.hwr;
+        self.yp[37] =
+            (self.fws * 500.53 * (self.tcws - self.tws) - self.qus * 1.0e6 / 1.8) / self.hws;
 
         self.ivst[9] = self.idv[13];
         self.ivst[10] = self.idv[14];
@@ -1174,7 +1081,7 @@ impl TennesseeEastmanProcess {
         }
         if ity == 2 {
             let r = 3.57696e-6;
-            h -= r * (t + sp(273.15));
+            h -= r * (t + 273.15);
         }
         h
     }
