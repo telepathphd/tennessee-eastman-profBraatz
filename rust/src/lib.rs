@@ -4,9 +4,11 @@
 //! COMMON blocks are owned by [`TennesseeEastmanProcess`]. Indexing in the
 //! public API is **1-based**, matching `XMEAS(n)`, `XMV(n)`, and `IDV(n)`.
 
+pub mod catalog;
 pub mod closed_loop;
 pub mod open_loop;
 pub mod process;
+pub mod simulate;
 
 pub use closed_loop::{ClosedLoopConfig, PlantWideController};
 pub use open_loop::StripperLevelController;

@@ -72,6 +72,18 @@ cargo run --release --bin temain -- --npts 1000
 cargo run --release --bin temain_mod -- --npts 172800 --sspts 28800 --idv 12 --output . --overwrite
 ```
 
+### Local console (`te-console` + `web/`)
+
+Vue operator desk on the native replica: setpoints, scheduled disturbance injections, run, P&ID + strip chart. Offline after `npm run build`.
+
+```bash
+cd web && npm install && npm run build
+cd ../rust && cargo run --release --bin te-console
+# http://127.0.0.1:8787
+```
+
+During UI work, keep the API on 8787 and `cd web && npm run dev` (Vite proxies `/api`).
+
 `temain_mod` flags map to the Fortran edit points: `--npts` (`NPTS`), `--sspts` (`SSPTS`), `--idv` (disturbances after steady state; `0` disables them), `--seed` (`G` in `teprob.f`). Output files use the same `TE_data_*.dat` names as Table 1, written to `--output` instead of `~/`.
 
 Library usage:

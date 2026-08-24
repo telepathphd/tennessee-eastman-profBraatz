@@ -99,6 +99,18 @@ impl PlantWideController {
         this
     }
 
+    pub fn default_setpoints() -> [f64; 20] {
+        Self::new(crate::process::default_delta_t()).setpt
+    }
+
+    /// 1-based `SETPT(n)` overrides from `temain_mod.f`.
+    pub fn apply_setpoint_overrides(&mut self, overrides: &[(usize, f64)]) {
+        for &(n, value) in overrides {
+            assert!((1..=20).contains(&n), "SETPT index must be 1..=20");
+            self.setpt[n - 1] = value;
+        }
+    }
+
     /// `temain_mod.f` base-case valve positions after `TEINIT`.
     pub fn apply_base_xmv(process: &mut TennesseeEastmanProcess) {
         process.set_xmv(1, 63.053);

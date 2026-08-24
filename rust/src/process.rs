@@ -324,6 +324,36 @@ impl TennesseeEastmanProcess {
         self.isd != 0
     }
 
+    /// Interlock trips from `TEFUNC` (`ISD`). Empty when the plant is running.
+    pub fn shutdown_reasons(&self) -> Vec<&'static str> {
+        let mut reasons = Vec::new();
+        if self.xmeas[6] > 3000.0 {
+            reasons.push("Reactor pressure exceeds 3000 kPa gauge");
+        }
+        if self.vlr / 35.3145 > 24.0 {
+            reasons.push("Reactor liquid volume high");
+        }
+        if self.vlr / 35.3145 < 2.0 {
+            reasons.push("Reactor liquid volume low");
+        }
+        if self.xmeas[8] > 175.0 {
+            reasons.push("Reactor temperature exceeds 175 °C");
+        }
+        if self.vls / 35.3145 > 12.0 {
+            reasons.push("Separator liquid volume high");
+        }
+        if self.vls / 35.3145 < 1.0 {
+            reasons.push("Separator liquid volume low");
+        }
+        if self.vlc / 35.3145 > 8.0 {
+            reasons.push("Stripper liquid volume high");
+        }
+        if self.vlc / 35.3145 < 1.0 {
+            reasons.push("Stripper liquid volume low");
+        }
+        reasons
+    }
+
     /// Observation vector used by the training/testing `.dat` files:
     /// `[XMEAS(1..41), XMV(1..11)]`.
     pub fn observation(&self) -> [f64; OBSERVATION_LEN] {
