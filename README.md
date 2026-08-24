@@ -3,7 +3,7 @@
 1. [Author](#author)
 2. [Contents](#contents)
 
-	3. [`teprob.f`](#teprobf)
+	3. [`temain.f`](#temainf)
 	4. [`temain_mod.f`](#temainmodf)
 
 		5. [License](#license)
@@ -16,6 +16,8 @@
 		6. [Continuous Process Measurements](#continuous-process-measurements)
 		7. [Sampled Process Measurements](#sampled-process-measurements)
 		8. [Process Disturbances](#process-disturbances)
+
+	6. [Rust replica](#rust-replica-rust)
 
 # Author
 
@@ -56,6 +58,33 @@ An observation vector at a particular time instant is given by
  x = [XMEAS(1), XMEAS(2), ..., XMEAS(41), XMV(1), ..., XMV(11)]^T
 ```
 where `XMEAS(n)`is the n-th measured variable and `XMV(n)` is the n-th manipulated variable.
+
+---
+
+## Rust replica (`rust/`)
+
+`rust/` is a Rust equivalent of `teprob.f`, `temain.f`, and `temain_mod.f`. COMMON blocks become `TennesseeEastmanProcess`; `TEINIT` / `TEFUNC` / `TESUBi` keep the original equations, including Fortran `REAL` constant rounding and the `TESUB7` LCG.
+
+```bash
+cd rust
+cargo test --release
+cargo run --release --bin temain -- --npts 1000
+cargo run --release --bin temain_mod -- --npts 172800 --sspts 28800 --idv 12 --output . --overwrite
+```
+
+`temain_mod` flags map to the Fortran edit points: `--npts` (`NPTS`), `--sspts` (`SSPTS`), `--idv` (disturbances after steady state; `0` disables them), `--seed` (`G` in `teprob.f`). Output files use the same `TE_data_*.dat` names as Table 1, written to `--output` instead of `~/`.
+
+Library usage:
+
+```rust
+use tennessee_eastman::{default_delta_t, TennesseeEastmanProcess};
+
+let mut plant = TennesseeEastmanProcess::new();
+plant.teinit();
+plant.set_idv(12, true);
+plant.integrate(default_delta_t());
+let x = plant.observation(); // XMEAS(1..41), XMV(1..11)
+```
 
 ---
 

@@ -1,0 +1,20 @@
+[package]
+name = "tennessee-eastman"
+version = "0.1.0"
+edition = "2021"
+license = "NCSA"
+description = "Rust equivalent of the Tennessee Eastman Process Control Test Problem (Downs & Vogel / Braatz)"
+readme = false
+publish = false
+
+[[bin]]
+name = "temain"
+path = "src/bin/temain.rs"
+
+[[bin]]
+name = "temain_mod"
+path = "src/bin/temain_mod.rs"
+
+[lib]
+name = "tennessee_eastman"
+path = "src/lib.rs"

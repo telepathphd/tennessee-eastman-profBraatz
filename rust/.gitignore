@@ -1,0 +1,6 @@
+/target
+/_dump_teinit.exe
+/_dump_teinit.f
+/teinit_gold.txt
+/TE_data_*.dat
+/tmp_out/
