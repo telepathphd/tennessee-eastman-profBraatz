@@ -14,25 +14,25 @@
       <path d="M40 230 H170" marker-end="url(#arr)" />
     </g>
 
-    <g class="hot" :class="hotClass(1)" @click="onPin($event, 1)">
+    <g class="hot" :class="hotClass(1)" @pointerdown="onHotDown($event, 1)">
       <title>进料 A（物流 1）</title>
       <rect class="hit" x="36" y="86" width="128" height="28" />
       <text x="44" y="104">S1 A</text>
       <text class="val" :class="valClass(1)" x="100" y="104">{{ m(1) }}</text>
     </g>
-    <g class="hot" :class="hotClass(2)" @click="onPin($event, 2)">
+    <g class="hot" :class="hotClass(2)" @pointerdown="onHotDown($event, 2)">
       <title>进料 D（物流 2）</title>
       <rect class="hit" x="36" y="126" width="128" height="28" />
       <text x="44" y="144">S2 D</text>
       <text class="val" :class="valClass(2)" x="100" y="144">{{ m(2) }}</text>
     </g>
-    <g class="hot" :class="hotClass(3)" @click="onPin($event, 3)">
+    <g class="hot" :class="hotClass(3)" @pointerdown="onHotDown($event, 3)">
       <title>进料 E（物流 3）</title>
       <rect class="hit" x="36" y="166" width="128" height="28" />
       <text x="44" y="184">S3 E</text>
       <text class="val" :class="valClass(3)" x="100" y="184">{{ m(3) }}</text>
     </g>
-    <g class="hot" :class="hotClass(4)" @click="onPin($event, 4)">
+    <g class="hot" :class="hotClass(4)" @pointerdown="onHotDown($event, 4)">
       <title>进料 A/C（物流 4）</title>
       <rect class="hit" x="36" y="206" width="128" height="28" />
       <text x="44" y="224">S4 A/C</text>
@@ -48,7 +48,7 @@
       <text class="title" x="85" y="48">反应器</text>
     </g>
 
-    <g class="hot" :class="hotClass(9)" transform="translate(348,96)" @click="onPin($event, 9)">
+    <g class="hot" :class="hotClass(9)" transform="translate(348,96)" @pointerdown="onHotDown($event, 9)">
       <title>反应器温度</title>
       <rect class="hit" x="0" y="0" width="86" height="52" />
       <AnalogBar
@@ -63,7 +63,7 @@
       <text class="val" :class="valClass(9)" x="16" y="30">{{ m(9) }}</text>
       <text class="u" x="16" y="44">°C</text>
     </g>
-    <g class="hot" :class="hotClass(7)" transform="translate(348,154)" @click="onPin($event, 7)">
+    <g class="hot" :class="hotClass(7)" transform="translate(348,154)" @pointerdown="onHotDown($event, 7)">
       <title>反应器压力</title>
       <rect class="hit" x="0" y="0" width="86" height="52" />
       <AnalogBar
@@ -78,7 +78,7 @@
       <text class="val" :class="valClass(7)" x="16" y="30">{{ m(7) }}</text>
       <text class="u" x="16" y="44">kPa</text>
     </g>
-    <g class="hot" :class="hotClass(8)" transform="translate(348,212)" @click="onPin($event, 8)">
+    <g class="hot" :class="hotClass(8)" transform="translate(348,212)" @pointerdown="onHotDown($event, 8)">
       <title>反应器液位</title>
       <rect class="hit" x="0" y="0" width="86" height="52" />
       <AnalogBar
@@ -93,7 +93,7 @@
       <text class="val" :class="valClass(8)" x="16" y="30">{{ m(8) }}</text>
       <text class="u" x="16" y="44">%</text>
     </g>
-    <g class="hot" :class="hotClass(21)" transform="translate(196,296)" @click="onPin($event, 21)">
+    <g class="hot" :class="hotClass(21)" transform="translate(196,296)" @pointerdown="onHotDown($event, 21)">
       <title>反应器冷却水出口温度</title>
       <rect class="hit" x="0" y="0" width="130" height="22" />
       <text class="small" x="0" y="14">CW {{ m(21) }} °C</text>
@@ -106,7 +106,7 @@
       <line x1="18" y1="52" x2="132" y2="52" />
       <text class="title" x="75" y="44">冷凝器</text>
     </g>
-    <g class="hot" :class="hotClass(22)" transform="translate(448,104)" @click="onPin($event, 22)">
+    <g class="hot" :class="hotClass(22)" transform="translate(448,104)" @pointerdown="onHotDown($event, 22)">
       <title>冷凝器冷却水出口温度</title>
       <rect class="hit" x="0" y="0" width="130" height="20" />
       <text class="small" x="0" y="14">CW {{ m(22) }} °C</text>
@@ -117,17 +117,17 @@
       <line x1="16" y1="78" x2="164" y2="78" stroke-dasharray="6 4" />
       <text class="title" x="90" y="24">气液分离器</text>
     </g>
-    <g class="hot" :class="hotClass(11)" transform="translate(650,118)" @click="onPin($event, 11)">
+    <g class="hot" :class="hotClass(11)" transform="translate(650,118)" @pointerdown="onHotDown($event, 11)">
       <title>分离器温度</title>
       <rect class="hit" x="0" y="0" width="100" height="20" />
       <text class="val" :class="valClass(11)" x="50" y="14">{{ m(11) }} °C</text>
     </g>
-    <g class="hot" :class="hotClass(13)" transform="translate(650,140)" @click="onPin($event, 13)">
+    <g class="hot" :class="hotClass(13)" transform="translate(650,140)" @pointerdown="onHotDown($event, 13)">
       <title>分离器压力</title>
       <rect class="hit" x="0" y="0" width="100" height="20" />
       <text class="val" :class="valClass(13)" x="50" y="14">{{ m(13) }} kPa</text>
     </g>
-    <g class="hot" :class="hotClass(12)" transform="translate(828,100)" @click="onPin($event, 12)">
+    <g class="hot" :class="hotClass(12)" transform="translate(828,100)" @pointerdown="onHotDown($event, 12)">
       <title>分离器液位</title>
       <rect class="hit" x="0" y="0" width="78" height="52" />
       <AnalogBar
@@ -147,12 +147,12 @@
       <polygon points="20,20 130,50 20,80" />
       <text class="title" x="86" y="104">循环压缩机</text>
     </g>
-    <g class="hot" :class="hotClass(20)" transform="translate(456,348)" @click="onPin($event, 20)">
+    <g class="hot" :class="hotClass(20)" transform="translate(456,348)" @pointerdown="onHotDown($event, 20)">
       <title>压缩机功率</title>
       <rect class="hit" x="0" y="0" width="120" height="22" />
       <text class="val" :class="valClass(20)" x="50" y="16">{{ m(20) }} kW</text>
     </g>
-    <g class="hot" :class="hotClass(5)" transform="translate(456,370)" @click="onPin($event, 5)">
+    <g class="hot" :class="hotClass(5)" transform="translate(456,370)" @pointerdown="onHotDown($event, 5)">
       <title>循环流量（物流 8）</title>
       <rect class="hit" x="0" y="0" width="120" height="20" />
       <text class="small" x="50" y="14">S8 {{ m(5) }}</text>
@@ -163,12 +163,12 @@
       <path d="M32 40 H128 M32 80 H128 M32 120 H128 M32 160 H128 M32 200 H128" />
       <text class="title" x="80" y="22">汽提塔</text>
     </g>
-    <g class="hot" :class="hotClass(18)" transform="translate(1018,210)" @click="onPin($event, 18)">
+    <g class="hot" :class="hotClass(18)" transform="translate(1018,210)" @pointerdown="onHotDown($event, 18)">
       <title>汽提塔温度</title>
       <rect class="hit" x="0" y="0" width="90" height="22" />
       <text class="val" :class="valClass(18)" x="0" y="16">{{ m(18) }} °C</text>
     </g>
-    <g class="hot" :class="hotClass(15)" transform="translate(1018,236)" @click="onPin($event, 15)">
+    <g class="hot" :class="hotClass(15)" transform="translate(1018,236)" @pointerdown="onHotDown($event, 15)">
       <title>汽提塔液位</title>
       <rect class="hit" x="0" y="0" width="90" height="52" />
       <AnalogBar
@@ -183,7 +183,7 @@
       <text class="val" :class="valClass(15)" x="16" y="30">{{ m(15) }}</text>
       <text class="u" x="16" y="44">%</text>
     </g>
-    <g class="hot" :class="hotClass(17)" transform="translate(900,412)" @click="onPin($event, 17)">
+    <g class="hot" :class="hotClass(17)" transform="translate(900,412)" @pointerdown="onHotDown($event, 17)">
       <title>产品流量（物流 11）</title>
       <rect class="hit" x="0" y="0" width="140" height="22" />
       <text class="small" x="70" y="16">S11 {{ m(17) }}</text>
@@ -199,18 +199,18 @@
       <path d="M820 78 H1040" marker-end="url(#arr)" />
       <path d="M940 398 H1040" marker-end="url(#arr)" />
     </g>
-    <g class="hot" :class="hotClass(6)" transform="translate(470,186)" @click="onPin($event, 6)">
+    <g class="hot" :class="hotClass(6)" transform="translate(470,186)" @pointerdown="onHotDown($event, 6)">
       <title>反应器进料（物流 6）</title>
       <rect class="hit" x="0" y="0" width="90" height="20" />
       <text class="small" x="0" y="14">S6 {{ m(6) }}</text>
     </g>
-    <g class="hot" :class="hotClass(10)" transform="translate(960,62)" @click="onPin($event, 10)">
+    <g class="hot" :class="hotClass(10)" transform="translate(960,62)" @pointerdown="onHotDown($event, 10)">
       <title>放空流量（物流 9）</title>
       <rect class="hit" x="0" y="0" width="140" height="36" />
       <text x="0" y="14">S9 放空</text>
       <text class="val" :class="valClass(10)" x="0" y="30">{{ m(10) }}</text>
     </g>
-    <g class="hot" :class="hotClass(40)" transform="translate(960,430)" @click="onPin($event, 40)">
+    <g class="hot" :class="hotClass(40)" transform="translate(960,430)" @pointerdown="onHotDown($event, 40)">
       <title>产品 G</title>
       <rect class="hit" x="0" y="0" width="150" height="28" />
       <AnalogBar
@@ -223,7 +223,7 @@
       />
       <text class="val" :class="valClass(40)" x="54" y="8">G {{ m(40) }} %</text>
     </g>
-    <g class="hot" :class="hotClass(41)" transform="translate(960,458)" @click="onPin($event, 41)">
+    <g class="hot" :class="hotClass(41)" transform="translate(960,458)" @pointerdown="onHotDown($event, 41)">
       <title>产品 H</title>
       <rect class="hit" x="0" y="0" width="150" height="28" />
       <AnalogBar
@@ -242,7 +242,7 @@
       <polygon points="900,388 912,380 924,388 912,396" />
     </g>
 
-    <text class="foot" x="24" y="506">{{ status }} · 点击测量钉到趋势，Shift+点击移除</text>
+    <text class="foot" x="24" y="506">{{ status }} · 拖入趋势</text>
   </svg>
 </template>
 
@@ -260,7 +260,13 @@ export default {
     pens: { type: Object, default: () => ({}) },
     setpoints: { type: Object, default: () => ({}) },
   },
-  emits: ["pin"],
+  emits: ["drag-tag", "focus-tag"],
+  data() {
+    return { pending: null };
+  },
+  beforeUnmount() {
+    this.clearPending();
+  },
   methods: {
     key(n) {
       return `xmeas:${n}`;
@@ -300,8 +306,33 @@ export default {
     valClass(n) {
       return this.st(n);
     },
-    onPin(ev, n) {
-      this.$emit("pin", { key: this.key(n), shift: ev.shiftKey });
+    onHotDown(ev, n) {
+      if (ev.button != null && ev.button !== 0) return;
+      this.clearPending();
+      const key = this.key(n);
+      this.pending = { key, x: ev.clientX, y: ev.clientY, pinned: this.pinned.includes(key) };
+      window.addEventListener("pointermove", this.onWinMove, true);
+      window.addEventListener("pointerup", this.onWinUp, true);
+      window.addEventListener("pointercancel", this.onWinUp, true);
+    },
+    onWinMove(ev) {
+      const p = this.pending;
+      if (!p) return;
+      if (Math.hypot(ev.clientX - p.x, ev.clientY - p.y) < 8) return;
+      const key = p.key;
+      this.clearPending();
+      this.$emit("drag-tag", { key, x: ev.clientX, y: ev.clientY });
+    },
+    onWinUp() {
+      const p = this.pending;
+      this.clearPending();
+      if (p?.pinned) this.$emit("focus-tag", p.key);
+    },
+    clearPending() {
+      this.pending = null;
+      window.removeEventListener("pointermove", this.onWinMove, true);
+      window.removeEventListener("pointerup", this.onWinUp, true);
+      window.removeEventListener("pointercancel", this.onWinUp, true);
     },
   },
 };
@@ -370,7 +401,7 @@ export default {
 }
 .hot .hit {
   fill: transparent;
-  cursor: pointer;
+  cursor: grab;
 }
 .hot.pinned .hit {
   fill: var(--event);

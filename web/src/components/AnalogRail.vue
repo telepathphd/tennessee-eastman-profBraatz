@@ -7,7 +7,8 @@
       class="kpi"
       :class="[item.status, { pinned: item.pinned, focus: item.focus }]"
       :title="item.hint"
-      @click="onClick($event, item.key)"
+      draggable="false"
+      @pointerdown="onDown($event, item)"
     >
       <svg class="bar" viewBox="0 0 18 92" aria-hidden="true">
         <AnalogBar
@@ -39,10 +40,50 @@ export default {
   props: {
     items: { type: Array, default: () => [] },
   },
-  emits: ["pin"],
+  emits: ["drag-tag", "focus-tag"],
+  data() {
+    return { pending: null };
+  },
+  beforeUnmount() {
+    this.clearPending();
+  },
   methods: {
-    onClick(ev, key) {
-      this.$emit("pin", { key, shift: ev.shiftKey });
+    onDown(ev, item) {
+      if (ev.button != null && ev.button !== 0) return;
+      this.clearPending();
+      this.pending = { key: item.key, x: ev.clientX, y: ev.clientY, pinned: item.pinned };
+      window.addEventListener("pointermove", this.onWinMove, true);
+      window.addEventListener("pointerup", this.onWinUp, true);
+      window.addEventListener("pointercancel", this.onWinUp, true);
+    },
+    onWinMove(ev) {
+      const p = this.pending;
+      if (!p) return;
+      const dx = ev.clientX - p.x;
+      const dy = ev.clientY - p.y;
+      if (Math.hypot(dx, dy) < 8) return;
+      const rail = this.$el;
+      const r = rail.getBoundingClientRect();
+      const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+      const canScroll = rail.scrollHeight > rail.clientHeight + 1;
+      if (inside && canScroll && Math.abs(dy) > Math.abs(dx) * 1.2) {
+        this.clearPending();
+        return;
+      }
+      const key = p.key;
+      this.clearPending();
+      this.$emit("drag-tag", { key, x: ev.clientX, y: ev.clientY });
+    },
+    onWinUp() {
+      const p = this.pending;
+      this.clearPending();
+      if (p?.pinned) this.$emit("focus-tag", p.key);
+    },
+    clearPending() {
+      this.pending = null;
+      window.removeEventListener("pointermove", this.onWinMove, true);
+      window.removeEventListener("pointerup", this.onWinUp, true);
+      window.removeEventListener("pointercancel", this.onWinUp, true);
     },
   },
 };
@@ -71,9 +112,11 @@ export default {
   background: transparent;
   color: var(--ink);
   text-align: left;
-  cursor: pointer;
+  cursor: grab;
   flex: 1 1 0;
   min-height: 0;
+  touch-action: pan-y;
+  user-select: none;
 }
 .kpi:hover,
 .kpi.focus {

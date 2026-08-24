@@ -53,6 +53,12 @@ body.sash-row * {
   user-select: none !important;
 }
 
+body.tag-drag,
+body.tag-drag * {
+  cursor: grabbing !important;
+  user-select: none !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

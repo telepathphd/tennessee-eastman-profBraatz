@@ -1,46 +1,93 @@
 <template>
   <div class="trend" tabindex="0" @keydown="onKey">
     <div class="toolbar">
-      <span class="hint">框选放大 · Ctrl+滚轮缩放 · Shift+拖移 · 单击设时刻 · 点注入/联锁跳转</span>
+      <span class="hint">滚轮缩放 · 拖移时间窗 · 拖时刻光标 · 点注入/联锁跳转</span>
       <button type="button" class="reset" :disabled="isFull" @click="resetView">全时段</button>
     </div>
-    <div class="legend">
-      <label
-        v-for="layer in layers"
-        :key="layer.key"
-        class="layer"
-        :class="{ off: layer.hidden, focus: layer.key === focusKey }"
-      >
-        <input type="checkbox" :checked="!layer.hidden" @change="$emit('toggle-hidden', layer.key)" />
-        <i :style="{ background: layer.color }" />
-        <span class="name">{{ layer.label }}</span>
-        <small>{{ layer.unit }}</small>
-        <b>{{ fmt(readValue(layer)) }}</b>
-        <button type="button" class="x" title="从列表移除" @click.stop="$emit('remove', layer.key)">×</button>
-      </label>
-    </div>
-    <canvas
-      ref="overview"
-      class="overview"
-      @pointerdown="onOverviewDown"
-      @pointermove="onOverviewMove"
-      @pointerup="onOverviewUp"
-    />
-    <div class="stack-wrap">
-      <canvas
-        ref="stack"
-        class="stack"
-        @pointerdown="onStackDown"
-        @pointermove="onStackMove"
-        @pointerup="onStackUp"
-        @pointercancel="onStackUp"
-        @pointerleave="onLeave"
-        @wheel.prevent="onWheel"
-        @dblclick.prevent="resetView"
-      />
-      <div v-if="!layers.length" class="empty">在流程图上点一个测量，或先运行仿真。</div>
-      <div v-else-if="timeS.length < 2" class="empty">运行仿真后，纸条上才会出现过程值。</div>
-      <div v-else-if="!visibleLayers.length" class="empty">勾选上方图层以显示纸条。</div>
+    <div class="body">
+      <div class="chart">
+        <canvas
+          ref="overview"
+          class="overview"
+          @pointerdown="onOverviewDown"
+          @pointermove="onOverviewMove"
+          @pointerup="onOverviewUp"
+        />
+        <div class="stack-wrap">
+          <canvas
+            ref="stack"
+            class="stack"
+            :style="{ cursor: stackCursor }"
+            @pointerdown="onStackDown"
+            @pointermove="onStackMove"
+            @pointerup="onStackUp"
+            @pointercancel="onStackUp"
+            @pointerleave="onLeave"
+            @wheel.prevent="onWheel"
+            @dblclick.prevent="resetView"
+          />
+          <div v-if="!layers.length" class="empty">从流程图或关键变量拖入测量</div>
+          <div v-else-if="timeS.length < 2" class="empty">运行仿真后，纸条上才会出现过程值。</div>
+          <div v-else-if="!visibleLayers.length" class="empty">勾选右侧图层以显示纸条。</div>
+        </div>
+      </div>
+      <aside class="legend">
+        <div
+          v-for="layer in layers"
+          :key="layer.key"
+          class="layer"
+          :class="{ off: layer.hidden, focus: layer.key === focusKey }"
+          @click="$emit('focus', layer.key)"
+        >
+          <div class="head">
+            <input
+              type="checkbox"
+              :checked="!layer.hidden"
+              @click.stop
+              @change="$emit('toggle-hidden', layer.key)"
+            />
+            <i :style="{ background: layer.color }" />
+            <span class="name">{{ layer.label }}</span>
+            <button type="button" class="x" title="从列表移除" @click.stop="$emit('remove', layer.key)">
+              ×
+            </button>
+          </div>
+          <div class="read">
+            <b>{{ fmt(readValue(layer)) }}</b>
+            <small>{{ layer.unit }}</small>
+          </div>
+          <div class="lims" @click.stop>
+            <label>
+              下限
+              <input
+                type="number"
+                step="any"
+                :placeholder="fmt(windowRange(layer)[0])"
+                :value="layer.yLo != null ? layer.yLo : ''"
+                @change="onLimitChange(layer, 'lo', $event)"
+              />
+            </label>
+            <label>
+              上限
+              <input
+                type="number"
+                step="any"
+                :placeholder="fmt(windowRange(layer)[1])"
+                :value="layer.yHi != null ? layer.yHi : ''"
+                @change="onLimitChange(layer, 'hi', $event)"
+              />
+            </label>
+            <button
+              v-if="layer.yLo != null || layer.yHi != null"
+              type="button"
+              class="auto"
+              @click="$emit('clear-y-limits', layer.key)"
+            >
+              自动
+            </button>
+          </div>
+        </div>
+      </aside>
     </div>
   </div>
 </template>
@@ -57,7 +104,7 @@ export default {
     shutdownTimeS: { type: Number, default: null },
     focusKey: { type: String, default: "" },
   },
-  emits: ["update:cursor", "toggle-hidden", "remove"],
+  emits: ["update:cursor", "toggle-hidden", "remove", "focus", "set-y-limits", "clear-y-limits"],
   data() {
     return {
       viewT0: null,
@@ -66,6 +113,7 @@ export default {
       drag: null,
       ovDrag: null,
       markers: [],
+      nearCursor: false,
     };
   },
   computed: {
@@ -91,6 +139,11 @@ export default {
     },
     readIdx() {
       return this.hoverIdx != null ? this.hoverIdx : this.cursor;
+    },
+    stackCursor() {
+      if (this.drag?.mode === "pan") return "grabbing";
+      if (this.drag?.mode === "cursor" || this.nearCursor) return "ew-resize";
+      return "grab";
     },
   },
   watch: {
@@ -188,7 +241,7 @@ export default {
       if (!canvas) return null;
       const w = canvas.clientWidth;
       const h = canvas.clientHeight || 36;
-      const pad = { l: 52, r: 78, t: 4, b: 4 };
+      const pad = { l: 52, r: 12, t: 4, b: 4 };
       return { canvas, w, h, pad, iw: w - pad.l - pad.r, ih: h - pad.t - pad.b };
     },
     stackGeom() {
@@ -197,7 +250,7 @@ export default {
       const w = canvas.clientWidth;
       const h = canvas.clientHeight || 200;
       const nPanes = Math.max(1, this.visibleLayers.length);
-      const pad = { l: 52, r: 78, t: 6, b: 22 };
+      const pad = { l: 52, r: 12, t: 6, b: 22 };
       const gap = 5;
       const paneH = Math.max(28, (h - pad.t - pad.b - gap * (nPanes - 1)) / nPanes);
       return { canvas, w, h, pad, gap, paneH, iw: w - pad.l - pad.r };
@@ -210,19 +263,18 @@ export default {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       return ctx;
     },
-    yRange(layer, i0, i1) {
+    dataRange(layer, i0, i1) {
       let lo = Infinity;
       let hi = -Infinity;
-      for (let i = i0; i <= i1; i++) {
-        const v = layer.values[i];
+      const values = layer.values || [];
+      const a = Math.max(0, i0);
+      const b = Math.min(values.length - 1, i1);
+      for (let i = a; i <= b; i++) {
+        const v = values[i];
         if (v == null || Number.isNaN(v)) continue;
         if (v < lo) lo = v;
         if (v > hi) hi = v;
       }
-      if (layer.loShutdown != null) lo = Math.min(lo, layer.loShutdown);
-      if (layer.hiShutdown != null) hi = Math.max(hi, layer.hiShutdown);
-      if (layer.loOp != null) lo = Math.min(lo, layer.loOp);
-      if (layer.hiOp != null) hi = Math.max(hi, layer.hiOp);
       if (!Number.isFinite(lo)) {
         lo = 0;
         hi = 1;
@@ -233,6 +285,36 @@ export default {
       }
       const pad = (hi - lo) * 0.08;
       return [lo - pad, hi + pad];
+    },
+    windowRange(layer) {
+      const n = this.timeS.length;
+      if (n < 2 || !layer.values?.length) return [0, 1];
+      return this.dataRange(layer, this.indexAtTime(this.t0), this.indexAtTime(this.t1));
+    },
+    yRange(layer, i0, i1) {
+      if (layer.yLo != null && layer.yHi != null && Number.isFinite(layer.yLo) && Number.isFinite(layer.yHi)) {
+        let lo = layer.yLo;
+        let hi = layer.yHi;
+        if (lo === hi) {
+          lo -= 1;
+          hi += 1;
+        }
+        return lo < hi ? [lo, hi] : [hi, lo];
+      }
+      return this.dataRange(layer, i0, i1);
+    },
+    onLimitChange(layer, side, ev) {
+      const n = Number(ev.target.value);
+      if (!Number.isFinite(n)) {
+        ev.target.value = layer[side === "lo" ? "yLo" : "yHi"] ?? "";
+        return;
+      }
+      const auto = this.windowRange(layer);
+      let lo = side === "lo" ? n : (layer.yLo ?? auto[0]);
+      let hi = side === "hi" ? n : (layer.yHi ?? auto[1]);
+      if (lo === hi) hi = lo + 1;
+      if (lo > hi) [lo, hi] = [hi, lo];
+      this.$emit("set-y-limits", { key: layer.key, lo, hi });
     },
     draw() {
       this.drawOverview();
@@ -294,7 +376,14 @@ export default {
         ctx.strokeRect(g.pad.l, y0, g.iw, g.paneH);
 
         const [lo, hi] = this.yRange(layer, i0, i1);
-        const yOf = (v) => y0 + (1 - (v - lo) / (hi - lo)) * g.paneH;
+        const span = Math.max(1e-9, hi - lo);
+        const yOf = (v) => y0 + (1 - (v - lo) / span) * g.paneH;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.rect(g.pad.l, y0, g.iw, g.paneH);
+        ctx.clip();
+
         if (layer.loOp != null && layer.hiOp != null) {
           ctx.fillStyle = "rgba(184, 192, 198, 0.35)";
           const ya = yOf(layer.hiOp);
@@ -335,6 +424,7 @@ export default {
           ctx.lineTo(this.xOfTime(this.timeS[i1], g.pad.l, g.iw, t0, t1), yOf(layer.values[i1]));
         }
         ctx.stroke();
+        ctx.restore();
 
         ctx.fillStyle = "#5c656c";
         ctx.font = "10px ui-monospace, Consolas, monospace";
@@ -348,11 +438,6 @@ export default {
         ctx.fillStyle = "#2c3338";
         ctx.font = "11px Bahnschrift, Segoe UI, sans-serif";
         ctx.fillText(layer.label, g.pad.l + 6, y0 + 4);
-
-        ctx.textBaseline = "middle";
-        ctx.font = "600 13px ui-monospace, Consolas, monospace";
-        ctx.fillStyle = layer.color;
-        ctx.fillText(this.fmt(layer.values[this.readIdx]), g.pad.l + g.iw + 6, y0 + g.paneH / 2);
       });
 
       const markEvent = (t, color, dash, label) => {
@@ -384,21 +469,13 @@ export default {
       const ct = this.timeS[Math.min(idx, n - 1)];
       if (ct >= t0 && ct <= t1) {
         const cx = this.xOfTime(ct, g.pad.l, g.iw, t0, t1);
-        ctx.strokeStyle = this.hoverIdx != null ? "rgba(44,51,56,0.55)" : "#2c3338";
-        ctx.lineWidth = this.hoverIdx != null ? 1 : 1.3;
+        const draggingCursor = this.drag?.mode === "cursor";
+        ctx.strokeStyle = this.hoverIdx != null && !draggingCursor ? "rgba(44,51,56,0.55)" : "#2c3338";
+        ctx.lineWidth = this.hoverIdx != null && !draggingCursor ? 1 : 1.6;
         ctx.beginPath();
         ctx.moveTo(cx, g.pad.t);
         ctx.lineTo(cx, g.h - g.pad.b);
         ctx.stroke();
-      }
-
-      if (this.drag?.mode === "box" && this.drag.curX != null) {
-        const xa = Math.min(this.drag.x, this.drag.curX);
-        const xb = Math.max(this.drag.x, this.drag.curX);
-        ctx.fillStyle = "rgba(61, 107, 153, 0.18)";
-        ctx.fillRect(xa, g.pad.t, xb - xa, g.h - g.pad.t - g.pad.b);
-        ctx.strokeStyle = "#3d6b99";
-        ctx.strokeRect(xa, g.pad.t, xb - xa, g.h - g.pad.t - g.pad.b);
       }
 
       ctx.fillStyle = "#5c656c";
@@ -420,12 +497,29 @@ export default {
     hitMarker(x) {
       return this.markers.find((m) => Math.abs(m.x - x) <= 8) || null;
     },
+    cursorX(g) {
+      const n = this.timeS.length;
+      if (!n) return null;
+      const ct = this.timeS[Math.min(this.cursor, n - 1)];
+      if (ct < this.t0 || ct > this.t1) return null;
+      return this.xOfTime(ct, g.pad.l, g.iw, this.t0, this.t1);
+    },
+    hitCursor(x, g) {
+      const cx = this.cursorX(g);
+      return cx != null && Math.abs(x - cx) <= 8;
+    },
     onStackDown(ev) {
       const g = this.stackGeom();
       if (!g) return;
       const { x } = this.localXY(ev, g.canvas);
       g.canvas.setPointerCapture?.(ev.pointerId);
-      this.drag = { x, mode: ev.shiftKey ? "pan" : "maybe", t0: this.t0, t1: this.t1, curX: x };
+      if (this.hitCursor(x, g)) {
+        this.hoverIdx = null;
+        this.drag = { x, mode: "cursor" };
+        this.$emit("update:cursor", this.indexFromX(x, g.pad.l, g.iw));
+        return;
+      }
+      this.drag = { x, mode: "maybe", t0: this.t0, t1: this.t1 };
     },
     onStackMove(ev) {
       const g = this.stackGeom();
@@ -433,31 +527,26 @@ export default {
       const { x } = this.localXY(ev, g.canvas);
       if (!this.drag) {
         this.hoverIdx = this.indexFromX(x, g.pad.l, g.iw);
+        this.nearCursor = this.hitCursor(x, g);
         return;
       }
-      this.drag.curX = x;
-      if (this.drag.mode === "pan" || ev.shiftKey) {
-        this.drag.mode = "pan";
+      if (this.drag.mode === "cursor") {
+        this.$emit("update:cursor", this.indexFromX(x, g.pad.l, g.iw));
+        return;
+      }
+      if (this.drag.mode === "maybe" && Math.abs(x - this.drag.x) > 5) this.drag.mode = "pan";
+      if (this.drag.mode === "pan") {
         const dt = this.timeFromX(this.drag.x, g.pad.l, g.iw) - this.timeFromX(x, g.pad.l, g.iw);
         this.clampView(this.drag.t0 + dt, this.drag.t1 + dt);
-        return;
       }
-      if (Math.abs(x - this.drag.x) > 5) this.drag.mode = "box";
-      if (this.drag.mode === "box") this.draw();
     },
     onStackUp(ev) {
       const g = this.stackGeom();
       const drag = this.drag;
       this.drag = null;
       if (!g || !drag) return;
+      if (drag.mode === "pan" || drag.mode === "cursor") return;
       const { x } = this.localXY(ev, g.canvas);
-      if (drag.mode === "box") {
-        const ta = this.timeFromX(drag.x, g.pad.l, g.iw);
-        const tb = this.timeFromX(x, g.pad.l, g.iw);
-        if (Math.abs(tb - ta) > this.minSpan() * 0.5) this.clampView(ta, tb);
-        return;
-      }
-      if (drag.mode === "pan") return;
       const mark = this.hitMarker(x);
       if (mark) {
         this.jumpTo(mark.t);
@@ -466,10 +555,12 @@ export default {
       this.$emit("update:cursor", this.indexFromX(x, g.pad.l, g.iw));
     },
     onLeave() {
-      if (!this.drag) this.hoverIdx = null;
+      if (!this.drag) {
+        this.hoverIdx = null;
+        this.nearCursor = false;
+      }
     },
     onWheel(ev) {
-      if (!ev.ctrlKey && !ev.metaKey) return;
       const g = this.stackGeom();
       if (!g) return;
       const { x } = this.localXY(ev, g.canvas);
@@ -559,31 +650,63 @@ export default {
   opacity: 0.4;
   cursor: default;
 }
-.legend {
+.body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 200px;
+  flex: 1;
+  min-height: 0;
+}
+.chart {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.25rem 0.7rem;
-  padding: 0.2rem 0.5rem;
-  font-size: 0.75rem;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.legend {
+  overflow: auto;
+  border-left: 1px solid var(--rule);
+  padding: 0.25rem 0.35rem 0.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-height: 0;
 }
 .layer {
   display: flex;
-  align-items: center;
-  gap: 0.28rem;
+  flex-direction: column;
+  gap: 0.18rem;
   margin: 0;
+  padding: 0.28rem 0.3rem;
+  border: 1px solid transparent;
   cursor: pointer;
 }
-.layer i {
-  width: 0.65rem;
-  height: 0.65rem;
-  display: inline-block;
-}
-.layer b {
-  font-family: var(--type-data);
-  font-weight: 600;
+.layer:hover,
+.layer.focus {
+  border-color: var(--rule);
+  background: #eceef0;
 }
 .layer.off {
   opacity: 0.45;
+}
+.head {
+  display: flex;
+  align-items: center;
+  gap: 0.28rem;
+  min-width: 0;
+}
+.head i {
+  width: 0.65rem;
+  height: 0.65rem;
+  flex: 0 0 auto;
+  display: inline-block;
+}
+.name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.72rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .layer.focus .name {
   text-decoration: underline;
@@ -596,6 +719,54 @@ export default {
   cursor: pointer;
   padding: 0 0.15rem;
   font-size: 0.9rem;
+}
+.read {
+  display: flex;
+  align-items: baseline;
+  gap: 0.3rem;
+  padding-left: 1.35rem;
+}
+.read b {
+  font-family: var(--type-data);
+  font-weight: 600;
+  font-size: 0.88rem;
+}
+.read small {
+  color: var(--ink-soft);
+  font-size: 0.68rem;
+}
+.lims {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.2rem 0.28rem;
+  padding-left: 1.35rem;
+}
+.lims label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.08rem;
+  margin: 0;
+  font-size: 0.62rem;
+  color: var(--ink-soft);
+}
+.lims input {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  background: #f3f5f6;
+  padding: 0.12rem 0.25rem;
+  color: var(--ink);
+  font-family: var(--type-data);
+  font-size: 0.72rem;
+}
+.auto {
+  grid-column: 1 / -1;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: 0.1rem 0.3rem;
+  cursor: pointer;
+  font-size: 0.68rem;
 }
 .overview {
   height: 36px;
@@ -613,7 +784,6 @@ export default {
   width: 100%;
   height: 100%;
   display: block;
-  cursor: crosshair;
   touch-action: none;
 }
 .empty {

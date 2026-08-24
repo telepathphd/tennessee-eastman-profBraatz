@@ -157,7 +157,8 @@
             :focus-key="focusKey"
             :pens="penMap"
             :setpoints="pvSetpoints"
-            @pin="onPin"
+            @drag-tag="onTagDragStart"
+            @focus-tag="focusKey = $event"
           />
         </div>
       </section>
@@ -170,13 +171,13 @@
           关键变量
         </button>
         <div class="pane-body flush">
-          <AnalogRail :items="kpiItems" @pin="onPin" />
+          <AnalogRail :items="kpiItems" @drag-tag="onTagDragStart" @focus-tag="focusKey = $event" />
         </div>
       </aside>
 
       <Sash class="sash-bottom" axis="h" @start="onTrendStart" @drag="onSashDrag" @end="onSashEnd" @reset="resetTrend" />
 
-      <section class="pane trends" :class="{ folded: !open.trends }">
+      <section ref="trendsPane" class="pane trends" :class="{ folded: !open.trends, drop: dropOverTrend }">
         <button type="button" class="pane-title" :aria-expanded="open.trends" @click="togglePane('trends')">
           <i class="chev" aria-hidden="true" />
           趋势
@@ -192,6 +193,9 @@
             @update:cursor="cursor = $event"
             @toggle-hidden="toggleHidden"
             @remove="removeTag"
+            @focus="focusKey = $event"
+            @set-y-limits="setYLimits"
+            @clear-y-limits="clearYLimits"
           />
           <div class="picker">
             <input v-model="query" type="search" placeholder="补充趋势：反应器、液位、产品…" />
@@ -201,6 +205,14 @@
           </div>
         </div>
       </section>
+    </div>
+    <div
+      v-if="dragKey"
+      class="tag-ghost"
+      :style="{ left: `${dragPos.x}px`, top: `${dragPos.y}px` }"
+    >
+      <i :style="{ background: dragGhost.color }" />
+      {{ dragGhost.label }}
     </div>
   </div>
 </template>
@@ -248,6 +260,7 @@ export default {
       stripperSp: 50,
       tags: ["xmeas:7", "xmeas:8", "xmeas:9", "xmeas:17", "xmeas:40"],
       hiddenTags: [],
+      yLimits: {},
       focusKey: "",
       query: "",
       result: null,
@@ -264,6 +277,9 @@ export default {
       share: { cfg: 1, idv: 1.6, sp: 1.2 },
       sash: null,
       viewSash: null,
+      dragKey: "",
+      dragPos: { x: 0, y: 0 },
+      dropOverTrend: false,
     };
   },
   computed: {
@@ -359,7 +375,7 @@ export default {
           loOp: lim.loOp ?? null,
           hiOp: lim.hiOp ?? null,
           setpoint: this.pvSetpoints[k.n] ?? null,
-          hint: "点击钉到趋势，Shift+点击移除",
+          hint: "拖入趋势",
         };
       });
     },
@@ -376,6 +392,8 @@ export default {
           unit: meta?.unit || "",
           values: values || [],
           hidden: this.hiddenTags.includes(key),
+          yLo: this.yLimits[key]?.lo ?? null,
+          yHi: this.yLimits[key]?.hi ?? null,
           loOp: lim?.loOp ?? null,
           hiOp: lim?.hiOp ?? null,
           loShutdown: lim?.loShutdown ?? null,
@@ -398,6 +416,14 @@ export default {
         if (!this.tags.includes(key) && matches(label, m.n, q)) out.push({ key, label });
       }
       return out.slice(0, 12);
+    },
+    dragGhost() {
+      if (!this.dragKey) return { label: "", color: PENS[0] };
+      const { kind, n } = splitTag(this.dragKey);
+      const meta = kind === "xmeas" ? this.catalog?.xmeas?.[n - 1] : this.catalog?.xmv?.[n - 1];
+      const label = meta ? `${kind === "xmeas" ? "Y" : "U"}${n} ${meta.name_zh}` : this.dragKey;
+      const idx = this.tags.includes(this.dragKey) ? this.tags.indexOf(this.dragKey) : this.tags.length;
+      return { label, color: PENS[idx % PENS.length] };
     },
   },
   watch: {
@@ -426,6 +452,9 @@ export default {
     for (const v of this.catalog.xmv) {
       if (this.openXmv[v.n] == null) this.openXmv[v.n] = v.n === 10 ? 38 : 50;
     }
+  },
+  beforeUnmount() {
+    this.endTagDrag();
   },
   methods: {
     viewFlex(id) {
@@ -522,6 +551,40 @@ export default {
       for (const n of Object.keys(this.idvHour)) this.idvHour[n] = injectAt;
       this.save();
     },
+    onTagDragStart({ key, x, y }) {
+      this.dragKey = key;
+      this.dragPos = { x, y };
+      this.dropOverTrend = this.hitTrend(x, y);
+      document.body.classList.add("tag-drag");
+      window.addEventListener("pointermove", this.onTagDragMove, true);
+      window.addEventListener("pointerup", this.onTagDragEnd, true);
+      window.addEventListener("pointercancel", this.onTagDragEnd, true);
+    },
+    onTagDragMove(ev) {
+      this.dragPos = { x: ev.clientX, y: ev.clientY };
+      this.dropOverTrend = this.hitTrend(ev.clientX, ev.clientY);
+    },
+    onTagDragEnd(ev) {
+      const key = this.dragKey;
+      const over = this.hitTrend(ev.clientX, ev.clientY);
+      this.endTagDrag();
+      if (key && over) this.addTag(key);
+    },
+    endTagDrag() {
+      this.dragKey = "";
+      this.dropOverTrend = false;
+      document.body.classList.remove("tag-drag");
+      window.removeEventListener("pointermove", this.onTagDragMove, true);
+      window.removeEventListener("pointerup", this.onTagDragEnd, true);
+      window.removeEventListener("pointercancel", this.onTagDragEnd, true);
+    },
+    hitTrend(x, y) {
+      if (!this.open.trends) return false;
+      const el = this.$refs.trendsPane;
+      if (!el) return false;
+      const r = el.getBoundingClientRect();
+      return x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+    },
     toggleHold(n) {
       const next = new Set(this.held);
       if (next.has(n)) next.delete(n);
@@ -529,17 +592,14 @@ export default {
       this.held = next;
       this.save();
     },
-    onPin({ key, shift }) {
-      if (shift) this.removeTag(key);
-      else this.addTag(key);
-    },
     addTag(key) {
       if (this.tags.includes(key)) {
         this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
       } else if (this.tags.length < MAX_TAGS) {
         this.tags = [...this.tags, key];
+      } else {
+        return;
       }
-      this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
       this.focusKey = key;
       this.query = "";
       this.save();
@@ -547,12 +607,28 @@ export default {
     removeTag(key) {
       this.tags = this.tags.filter((k) => k !== key);
       this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
+      if (this.yLimits[key]) {
+        const next = { ...this.yLimits };
+        delete next[key];
+        this.yLimits = next;
+      }
       if (this.focusKey === key) this.focusKey = this.tags[0] || "";
       this.save();
     },
     toggleHidden(key) {
       if (this.hiddenTags.includes(key)) this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
       else this.hiddenTags = [...this.hiddenTags, key];
+      this.save();
+    },
+    setYLimits({ key, lo, hi }) {
+      this.yLimits = { ...this.yLimits, [key]: { lo, hi } };
+      this.save();
+    },
+    clearYLimits(key) {
+      if (!this.yLimits[key]) return;
+      const next = { ...this.yLimits };
+      delete next[key];
+      this.yLimits = next;
       this.save();
     },
     save() {
@@ -569,6 +645,7 @@ export default {
           held: [...this.held],
           tags: this.tags,
           hiddenTags: this.hiddenTags,
+          yLimits: this.yLimits,
           stripperSp: this.stripperSp,
           openXmv: this.openXmv,
           runW: this.runW,
@@ -594,6 +671,7 @@ export default {
         this.setpoints = raw.setpoints ?? {};
         this.tags = raw.tags ?? this.tags;
         this.hiddenTags = raw.hiddenTags ?? [];
+        this.yLimits = raw.yLimits ?? {};
         this.stripperSp = raw.stripperSp ?? this.stripperSp;
         this.openXmv = raw.openXmv ?? {};
         this.held = new Set(raw.held || []);
@@ -779,6 +857,9 @@ function clamp(n, lo, hi) {
   grid-column: 1 / -1;
   grid-row: 3;
 }
+.pane.trends.drop {
+  box-shadow: inset 0 0 0 2px var(--event);
+}
 .pane-title {
   display: flex;
   align-items: center;
@@ -957,6 +1038,26 @@ select {
 }
 .picker input {
   flex: 1 1 12rem;
+}
+.tag-ghost {
+  position: fixed;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  pointer-events: none;
+  transform: translate(10px, 8px);
+  padding: 0.2rem 0.45rem;
+  background: var(--panel);
+  border: 1px solid var(--ink);
+  color: var(--ink);
+  font-size: 0.78rem;
+  box-shadow: 0 1px 4px rgba(44, 51, 56, 0.18);
+}
+.tag-ghost i {
+  width: 0.65rem;
+  height: 0.65rem;
+  display: inline-block;
 }
 @media (max-width: 640px) {
   .bench {
