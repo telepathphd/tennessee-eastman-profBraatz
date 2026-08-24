@@ -9,12 +9,19 @@
 
 pub mod catalog;
 pub mod closed_loop;
+pub mod experiment;
 pub mod open_loop;
 pub mod process;
+pub mod session;
 pub mod simulate;
 
-pub use closed_loop::{ClosedLoopConfig, PlantWideController};
+pub use closed_loop::{ClosedLoopConfig, ControllerMask, PlantWideController};
+pub use experiment::{
+    run as run_experiment, CvChannel, ExperimentMeta, ExperimentRequest, ExperimentResult,
+    LoopMode, MvChannel, MvChannelKind, SchedulePoint, CSV_TIME_BASE,
+};
 pub use open_loop::StripperLevelController;
+pub use session::{PlantSession, SessionConfig, StepResponse};
 pub use process::{
     default_delta_t, interlock_reasons, TennesseeEastmanProcess, DEFAULT_RNG_SEED, N_COMPONENTS,
     N_IDV, N_STATES, N_STREAMS, N_XMEAS, N_XMV, OBSERVATION_LEN,

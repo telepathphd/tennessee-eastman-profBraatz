@@ -1,0 +1,3 @@
+# te_client (this repo) + python_hmpc from ../HMPC_Python/python_hmpc
+numpy>=1.24
+python-control>=0.9.4

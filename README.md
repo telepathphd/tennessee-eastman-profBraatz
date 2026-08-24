@@ -8,8 +8,10 @@ The original Illinois Fortran 77 sources and FDD datasets are kept as historical
 
 Directory | Role
 --------- | ----
-[`rust/`](rust/) | Process replica, open/closed-loop CLI, local console backend
-[`web/`](web/) | Vue operator desk (P&ID, strip chart, setpoints, scheduled injections)
+[`rust/`](rust/) | Process replica, CLI, console backend, experiment export
+[`web/`](web/) | Vue operator desk (P&ID, strip chart, setpoints, CSV export)
+[`python/te_client/`](python/te_client/) | mimo-sim-style excitation + experiment API client
+[`python/te_hmpc_bridge/`](python/te_hmpc_bridge/) | HMPC ↔ TE session step bridge
 [`archive/`](archive/) | Original `teprob.f` / `temain.f` / `temain_mod.f` and `d*.dat` files
 
 COMMON blocks become `TennesseeEastmanProcess`. `TEINIT` / `TEFUNC` / `TESUBi` keep the original equations in IEEE-754 double (constants as written, not Fortran default-kind `REAL` rounding). The `TESUB7` LCG is kept so measurement noise and random-variation disturbances stay reproducible. Trajectories are not bit-identical to gfortran dumps.
@@ -25,6 +27,26 @@ cd ../rust && cargo run --release --bin te-console
 ```
 
 During UI work, keep the API on 8787 and `cd web && npm run dev` (Vite proxies `/api`).
+
+Closed-loop runs record **Setpoint** time series; trends can overlay `setpt:*` tags. **Export CSV** writes mimo-sim `time,MV*,CV*` for `procest` in the sibling [mimo-sim](https://github.com/telepathphd/SysID_Demo) repo.
+
+## Identification experiments
+
+Batch experiments with piecewise **Setpoint** / **Manipulated Variable** schedules and mimo-sim CSV export (`docs/adr/0004-mimo-sim-ident-export.md`):
+
+```bash
+cd rust && cargo run --release --bin te-console
+# another terminal:
+python python/te_client/examples/run_gbn_reactor.py --output ./out
+```
+
+Or CLI only:
+
+```bash
+cd rust && cargo run --release --bin te-experiment -- --npts 7200 --output ./out --step 3600:18:122.0
+```
+
+APC (HMPC) uses `/api/session` + `/api/session/{id}/step` — see `python/te_hmpc_bridge/README.md`.
 
 ## CLI
 

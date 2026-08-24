@@ -1,0 +1,2 @@
+# stdlib only (urllib). Optional for local scripts:
+# pandas>=2.0

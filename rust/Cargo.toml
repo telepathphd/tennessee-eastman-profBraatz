@@ -19,6 +19,10 @@ path = "src/bin/temain_mod.rs"
 name = "te-console"
 path = "src/bin/te_console.rs"
 
+[[bin]]
+name = "te-experiment"
+path = "src/bin/te_experiment.rs"
+
 [lib]
 name = "tennessee_eastman"
 path = "src/lib.rs"

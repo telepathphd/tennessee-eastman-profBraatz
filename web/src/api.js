@@ -14,3 +14,17 @@ export async function runSim(body) {
   if (!r.ok) throw new Error(data.error || `simulate ${r.status}`);
   return data;
 }
+
+/** Download mimo-sim CSV (time, MV*, CV*) from recorded channels. */
+export async function exportMimoCsv({ time_s, mv, cv, record_every = 60 }) {
+  const r = await fetch("/api/export/mimo-csv", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ time_s, mv, cv, record_every }),
+  });
+  if (!r.ok) {
+    const data = await r.json().catch(() => ({}));
+    throw new Error(data.error || `export ${r.status}`);
+  }
+  return r.text();
+}

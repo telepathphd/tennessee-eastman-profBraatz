@@ -73,6 +73,9 @@ pub struct SimulationResult {
     pub time_s: Vec<u32>,
     pub xmeas: Vec<Vec<f32>>,
     pub xmv: Vec<Vec<f32>>,
+    /// Present when recorded (closed-loop experiments / console export).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub setpt: Option<Vec<Vec<f32>>>,
     pub shutdown: bool,
     pub shutdown_time_s: Option<u32>,
     pub shutdown_reasons: Vec<String>,
@@ -157,8 +160,9 @@ fn run_closed(
         })
         .collect();
 
-    let mut rec = Recorder::new(req, record_every);
-    rec.push(0, process);
+    let record_setpt = true;
+    let mut rec = Recorder::new(req, record_every, record_setpt);
+    rec.push(0, process, Some(&ctrl));
 
     for i in 1..=req.npts {
         apply_injections(process, &req.injections, i);
@@ -167,13 +171,13 @@ fn run_closed(
             ctrl.setpt[n - 1] = value;
         }
         if should_record_step(i, record_every, &req.injections) {
-            rec.push_if_new(i as u32, process);
+            rec.push_if_new(i as u32, process, Some(&ctrl));
         }
         process.integrate(dt);
         ctrl.constrain_hand(process);
         if process.is_shutdown() {
             rec.note_shutdown(i as u32, process);
-            rec.push_if_new(i as u32, process);
+            rec.push_if_new(i as u32, process, Some(&ctrl));
             break;
         }
     }
@@ -196,19 +200,19 @@ fn run_open(
         ctrl.setpt = sp;
     }
 
-    let mut rec = Recorder::new(req, record_every);
-    rec.push(0, process);
+    let mut rec = Recorder::new(req, record_every, false);
+    rec.push(0, process, None);
 
     for i in 1..=req.npts {
         apply_injections(process, &req.injections, i);
         ctrl.apply(process, dt);
         if should_record_step(i, record_every, &req.injections) {
-            rec.push_if_new(i as u32, process);
+            rec.push_if_new(i as u32, process, None);
         }
         process.integrate(dt);
         if process.is_shutdown() {
             rec.note_shutdown(i as u32, process);
-            rec.push_if_new(i as u32, process);
+            rec.push_if_new(i as u32, process, None);
             break;
         }
     }
@@ -216,7 +220,11 @@ fn run_open(
     Ok(rec.finish(req, record_every))
 }
 
-fn apply_injections(process: &mut TennesseeEastmanProcess, injections: &[Injection], step: usize) {
+pub(crate) fn apply_injections(
+    process: &mut TennesseeEastmanProcess,
+    injections: &[Injection],
+    step: usize,
+) {
     for inj in injections {
         if step >= inj.start_step.max(1) {
             process.set_idv(inj.idv, true);
@@ -224,7 +232,7 @@ fn apply_injections(process: &mut TennesseeEastmanProcess, injections: &[Injecti
     }
 }
 
-fn should_record_step(step: usize, record_every: usize, injections: &[Injection]) -> bool {
+pub(crate) fn should_record_step(step: usize, record_every: usize, injections: &[Injection]) -> bool {
     if step % record_every == 0 {
         return true;
     }
@@ -238,6 +246,7 @@ struct Recorder {
     time_s: Vec<u32>,
     xmeas: Vec<Vec<f32>>,
     xmv: Vec<Vec<f32>>,
+    setpt: Option<Vec<Vec<f32>>>,
     shutdown: bool,
     shutdown_time_s: Option<u32>,
     shutdown_reasons: Vec<String>,
@@ -246,7 +255,7 @@ struct Recorder {
 }
 
 impl Recorder {
-    fn new(req: &SimulationRequest, record_every: usize) -> Self {
+    fn new(req: &SimulationRequest, record_every: usize, record_setpt: bool) -> Self {
         let cap = req.npts / record_every + 2;
         Self {
             mode: req.mode,
@@ -255,6 +264,11 @@ impl Recorder {
             time_s: Vec::with_capacity(cap),
             xmeas: vec![Vec::with_capacity(cap); N_XMEAS],
             xmv: vec![Vec::with_capacity(cap); N_XMV],
+            setpt: if record_setpt {
+                Some(vec![Vec::with_capacity(cap); 20])
+            } else {
+                None
+            },
             shutdown: false,
             shutdown_time_s: None,
             shutdown_reasons: Vec::new(),
@@ -263,7 +277,12 @@ impl Recorder {
         }
     }
 
-    fn push(&mut self, t: u32, process: &TennesseeEastmanProcess) {
+    fn push(
+        &mut self,
+        t: u32,
+        process: &TennesseeEastmanProcess,
+        ctrl: Option<&PlantWideController>,
+    ) {
         self.time_s.push(t);
         self.steps_run = t as usize;
         let x = process.xmeas();
@@ -274,13 +293,23 @@ impl Recorder {
         for i in 0..N_XMV {
             self.xmv[i].push(mv[i] as f32);
         }
+        if let (Some(setpt), Some(ctrl)) = (&mut self.setpt, ctrl) {
+            for i in 0..20 {
+                setpt[i].push(ctrl.setpt[i] as f32);
+            }
+        }
     }
 
-    fn push_if_new(&mut self, t: u32, process: &TennesseeEastmanProcess) {
+    fn push_if_new(
+        &mut self,
+        t: u32,
+        process: &TennesseeEastmanProcess,
+        ctrl: Option<&PlantWideController>,
+    ) {
         if self.time_s.last().copied() == Some(t) {
             return;
         }
-        self.push(t, process);
+        self.push(t, process, ctrl);
     }
 
     fn note_shutdown(&mut self, t: u32, process: &TennesseeEastmanProcess) {
@@ -308,6 +337,7 @@ impl Recorder {
             time_s: self.time_s,
             xmeas: self.xmeas,
             xmv: self.xmv,
+            setpt: self.setpt,
             shutdown: self.shutdown,
             shutdown_time_s: self.shutdown_time_s,
             shutdown_reasons: self.shutdown_reasons,

@@ -19,6 +19,9 @@
           <dd>{{ activeInjLabel }}</dd>
         </div>
       </dl>
+      <button class="go secondary" type="button" :disabled="!result || busy" @click="exportCsv">
+        导出 CSV
+      </button>
       <button class="go" type="button" :disabled="busy" @click="simulate">
         {{ busy ? `积分中 ${elapsed} s` : "运行仿真" }}
       </button>
@@ -243,7 +246,7 @@
 </template>
 
 <script>
-import { loadCatalog, runSim } from "./api.js";
+import { exportMimoCsv, loadCatalog, runSim } from "./api.js";
 import AnalogRail from "./components/AnalogRail.vue";
 import PlantPfd from "./components/PlantPfd.vue";
 import Sash from "./components/Sash.vue";
@@ -414,8 +417,18 @@ export default {
     chartLayers() {
       return this.tags.map((key, i) => {
         const { kind, n } = splitTag(key);
-        const meta = kind === "xmeas" ? this.catalog?.xmeas?.[n - 1] : this.catalog?.xmv?.[n - 1];
-        const values = kind === "xmeas" ? this.result?.xmeas?.[n - 1] : this.result?.xmv?.[n - 1];
+        let meta;
+        let values;
+        if (kind === "xmeas") {
+          meta = this.catalog?.xmeas?.[n - 1];
+          values = this.result?.xmeas?.[n - 1];
+        } else if (kind === "setpt") {
+          meta = this.catalog?.setpoints?.[n - 1];
+          values = this.result?.setpt?.[n - 1];
+        } else {
+          meta = this.catalog?.xmv?.[n - 1];
+          values = this.result?.xmv?.[n - 1];
+        }
         const lim = kind === "xmeas" ? LIMITS[n] : null;
         return {
           key,
@@ -448,12 +461,22 @@ export default {
         if (this.tags.includes(key) || !matchesMeta(m, m.n, q)) continue;
         out.push({ key, label: displayTag(m, "xmv", m.n), desc: m.name_zh });
       }
+      if (this.mode === "closed_loop") {
+        for (const s of this.catalog.setpoints || []) {
+          const key = `setpt:${s.n}`;
+          if (this.tags.includes(key) || !matchesMeta(s, s.n, q)) continue;
+          out.push({ key, label: displayTag(s, "setpt", s.n), desc: s.name_zh });
+        }
+      }
       return out.slice(0, 12);
     },
     dragGhost() {
       if (!this.dragKey) return { label: "", color: PENS[0] };
       const { kind, n } = splitTag(this.dragKey);
-      const meta = kind === "xmeas" ? this.catalog?.xmeas?.[n - 1] : this.catalog?.xmv?.[n - 1];
+      let meta;
+      if (kind === "xmeas") meta = this.catalog?.xmeas?.[n - 1];
+      else if (kind === "setpt") meta = this.catalog?.setpoints?.[n - 1];
+      else meta = this.catalog?.xmv?.[n - 1];
       const label = displayTag(meta, kind, n);
       const idx = this.tags.includes(this.dragKey) ? this.tags.indexOf(this.dragKey) : this.tags.length;
       return { label, color: PENS[idx % PENS.length] };
@@ -727,6 +750,36 @@ export default {
         /* ignore broken local config */
       }
     },
+    async exportCsv() {
+      if (!this.result?.time_s?.length) return;
+      this.error = "";
+      try {
+        const mv = [];
+        const cv = [];
+        for (const key of this.tags) {
+          const { kind, n } = splitTag(key);
+          if (kind === "setpt" && this.result.setpt?.[n - 1]) mv.push(this.result.setpt[n - 1]);
+          else if (kind === "xmv") mv.push(this.result.xmv[n - 1]);
+          else if (kind === "xmeas") cv.push(this.result.xmeas[n - 1]);
+        }
+        if (!mv.length && this.result.setpt?.[17]) mv.push(this.result.setpt[17]);
+        if (!cv.length && this.result.xmeas?.[8]) cv.push(this.result.xmeas[8]);
+        const csv = await exportMimoCsv({
+          time_s: this.result.time_s,
+          mv,
+          cv,
+          record_every: this.result.record_every || this.recordEvery,
+        });
+        const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = "te_export.csv";
+        a.click();
+        URL.revokeObjectURL(a.href);
+      } catch (err) {
+        this.error = err.message || String(err);
+      }
+    },
     async simulate() {
       this.error = "";
       this.busy = true;
@@ -776,6 +829,7 @@ function splitTag(key) {
 
 function displayTag(meta, kind, n) {
   if (meta?.tag) return meta.tag;
+  if (kind === "setpt") return `SP${n}`;
   return `${kind === "xmeas" ? "Y" : "U"}${n}`;
 }
 
@@ -851,6 +905,10 @@ function clamp(n, lo, hi) {
 .go:disabled {
   opacity: 0.55;
   cursor: wait;
+}
+.go.secondary {
+  background: var(--panel);
+  color: var(--ink);
 }
 .banner {
   margin: 0;

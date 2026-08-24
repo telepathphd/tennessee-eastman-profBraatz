@@ -2,7 +2,56 @@
 
 #![allow(clippy::manual_is_multiple_of, clippy::neg_multiply)]
 
+use std::collections::BTreeSet;
+
 use crate::process::TennesseeEastmanProcess;
+
+/// Skip mask for `contrl1..contrl22` (index matches Fortran controller number).
+#[derive(Clone, Debug, Default)]
+pub struct ControllerMask {
+    pub skip: [bool; 23],
+}
+
+impl ControllerMask {
+    pub fn from_manual_setpoints(manual: &BTreeSet<usize>) -> Self {
+        let mut skip = [false; 23];
+        for &setpt in manual {
+            for &c in contrls_for_setpoint(setpt) {
+                if c < skip.len() {
+                    skip[c] = true;
+                }
+            }
+        }
+        Self { skip }
+    }
+}
+
+/// 1-based `SETPT(n)` → `contrl` indices skipped in Manual loop mode.
+pub fn contrls_for_setpoint(setpt: usize) -> &'static [usize] {
+    match setpt {
+        1 => &[1],
+        2 => &[2],
+        3 => &[3],
+        4 => &[4],
+        5 => &[5],
+        6 => &[6],
+        7 => &[7],
+        8 => &[8],
+        9 => &[9],
+        10 => &[10],
+        11 => &[11],
+        12 => &[22],
+        13 => &[13],
+        14 => &[14],
+        15 => &[15],
+        16 => &[16],
+        17 => &[17],
+        18 => &[18],
+        19 => &[19],
+        20 => &[20],
+        _ => &[],
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct ClosedLoopConfig {
@@ -128,30 +177,78 @@ impl PlantWideController {
 
     /// Discrete controllers scheduled like the Fortran `MOD(I, …)` tests.
     pub fn step(&mut self, process: &mut TennesseeEastmanProcess, i: usize) {
+        self.step_masked(process, i, &ControllerMask::default());
+    }
+
+    /// Like [`Self::step`] but skips controllers marked in `mask` (Manual loops).
+    pub fn step_masked(
+        &mut self,
+        process: &mut TennesseeEastmanProcess,
+        i: usize,
+        mask: &ControllerMask,
+    ) {
         if i % 3 == 0 {
-            self.contrl1(process);
-            self.contrl2(process);
-            self.contrl3(process);
-            self.contrl4(process);
-            self.contrl5(process);
-            self.contrl6(process);
-            self.contrl7(process);
-            self.contrl8(process);
-            self.contrl9(process);
-            self.contrl10(process);
-            self.contrl11(process);
-            self.contrl16(process);
-            self.contrl17(process);
-            self.contrl18(process);
+            if !mask.skip[1] {
+                self.contrl1(process);
+            }
+            if !mask.skip[2] {
+                self.contrl2(process);
+            }
+            if !mask.skip[3] {
+                self.contrl3(process);
+            }
+            if !mask.skip[4] {
+                self.contrl4(process);
+            }
+            if !mask.skip[5] {
+                self.contrl5(process);
+            }
+            if !mask.skip[6] {
+                self.contrl6(process);
+            }
+            if !mask.skip[7] {
+                self.contrl7(process);
+            }
+            if !mask.skip[8] {
+                self.contrl8(process);
+            }
+            if !mask.skip[9] {
+                self.contrl9(process);
+            }
+            if !mask.skip[10] {
+                self.contrl10(process);
+            }
+            if !mask.skip[11] {
+                self.contrl11(process);
+            }
+            if !mask.skip[16] {
+                self.contrl16(process);
+            }
+            if !mask.skip[17] {
+                self.contrl17(process);
+            }
+            if !mask.skip[18] {
+                self.contrl18(process);
+            }
         }
         if i % 360 == 0 {
-            self.contrl13(process);
-            self.contrl14(process);
-            self.contrl15(process);
-            self.contrl19(process);
+            if !mask.skip[13] {
+                self.contrl13(process);
+            }
+            if !mask.skip[14] {
+                self.contrl14(process);
+            }
+            if !mask.skip[15] {
+                self.contrl15(process);
+            }
+            if !mask.skip[19] {
+                self.contrl19(process);
+            }
         }
         if i % 900 == 0 {
-            self.contrl20(process);
+            if !mask.skip[20] {
+                self.contrl20(process);
+            }
         }
     }
 

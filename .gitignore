@@ -1,10 +1,20 @@
-# Rust
-/rust/target/
-/rust/target-test/
+# Rust (default `target/` + custom `CARGO_TARGET_DIR` e.g. target-test*)
+/rust/target*/
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+*.egg-info/
 
 # Vue
 /web/node_modules/
 /web/dist/
+
+# Identification experiment exports (`--output ./out`)
+/out/
 
 # Replica CLI dumps (`temain_mod --output .`)
 TE_data_*.dat
