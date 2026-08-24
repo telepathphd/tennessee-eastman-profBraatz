@@ -41,15 +41,7 @@ export const LIMITS = {
   41: { scaleLo: 0, scaleHi: 100 },
 };
 
-export const KPI_STRIP = [
-  { n: 7, name: "反应器压力" },
-  { n: 9, name: "反应器温度" },
-  { n: 8, name: "反应器液位" },
-  { n: 12, name: "分离器液位" },
-  { n: 15, name: "汽提塔液位" },
-  { n: 40, name: "产品 G" },
-  { n: 41, name: "产品 H" },
-];
+export const KPI_STRIP = [7, 9, 8, 12, 15, 40, 41];
 
 export function exceptionStatus(n, value) {
   const lim = LIMITS[n];

@@ -1,4 +1,8 @@
 //! Operator-facing names for measurements, valves, disturbances, and setpoints.
+//!
+//! `tag` is the DCS 位号 (ISA-5.1 letters + area 10 + loop = XMEAS index).
+//! Controllers that the plant-wide loop writes get C (FIC/LIC/TIC/AIC/PIC);
+//! the rest are indicators. Chinese copy lives in `name_zh` (description).
 
 use serde::Serialize;
 
@@ -18,6 +22,7 @@ pub enum IdvKind {
 #[derive(Clone, Debug, Serialize)]
 pub struct MeasMeta {
     pub n: usize,
+    pub tag: &'static str,
     pub name_en: &'static str,
     pub name_zh: &'static str,
     pub unit: &'static str,
@@ -27,6 +32,7 @@ pub struct MeasMeta {
 #[derive(Clone, Debug, Serialize)]
 pub struct MvMeta {
     pub n: usize,
+    pub tag: &'static str,
     pub name_en: &'static str,
     pub name_zh: &'static str,
     pub unit: &'static str,
@@ -44,6 +50,7 @@ pub struct IdvMeta {
 #[derive(Clone, Debug, Serialize)]
 pub struct SetpointMeta {
     pub n: usize,
+    pub tag: &'static str,
     pub name_en: &'static str,
     pub name_zh: &'static str,
     pub unit: &'static str,
@@ -86,11 +93,33 @@ pub fn catalog() -> Catalog {
 
 fn xmeas_meta() -> Vec<MeasMeta> {
     [
-        (1, "A Feed (stream 1)", "A 进料（物流 1）", "kscmh", "流量"),
-        (2, "D Feed (stream 2)", "D 进料（物流 2）", "kg/h", "流量"),
-        (3, "E Feed (stream 3)", "E 进料（物流 3）", "kg/h", "流量"),
+        (
+            1,
+            "FIC1001",
+            "A Feed (stream 1)",
+            "A 进料（物流 1）",
+            "kscmh",
+            "流量",
+        ),
+        (
+            2,
+            "FIC1002",
+            "D Feed (stream 2)",
+            "D 进料（物流 2）",
+            "kg/h",
+            "流量",
+        ),
+        (
+            3,
+            "FIC1003",
+            "E Feed (stream 3)",
+            "E 进料（物流 3）",
+            "kg/h",
+            "流量",
+        ),
         (
             4,
+            "FIC1004",
             "A and C Feed (stream 4)",
             "A/C 进料（物流 4）",
             "kscmh",
@@ -98,6 +127,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             5,
+            "FIC1005",
             "Recycle Flow (stream 8)",
             "循环流量（物流 8）",
             "kscmh",
@@ -105,45 +135,113 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             6,
+            "FI1006",
             "Reactor Feed Rate (stream 6)",
             "反应器进料（物流 6）",
             "kscmh",
             "反应器",
         ),
-        (7, "Reactor Pressure", "反应器压力", "kPa gauge", "反应器"),
-        (8, "Reactor Level", "反应器液位", "%", "反应器"),
-        (9, "Reactor Temperature", "反应器温度", "°C", "反应器"),
+        (
+            7,
+            "PI1007",
+            "Reactor Pressure",
+            "反应器压力",
+            "kPa gauge",
+            "反应器",
+        ),
+        (8, "LIC1008", "Reactor Level", "反应器液位", "%", "反应器"),
+        (
+            9,
+            "TIC1009",
+            "Reactor Temperature",
+            "反应器温度",
+            "°C",
+            "反应器",
+        ),
         (
             10,
+            "FIC1010",
             "Purge Rate (stream 9)",
             "放空流量（物流 9）",
             "kscmh",
             "流量",
         ),
-        (11, "Product Sep Temp", "分离器温度", "°C", "分离器"),
-        (12, "Product Sep Level", "分离器液位", "%", "分离器"),
-        (13, "Prod Sep Pressure", "分离器压力", "kPa gauge", "分离器"),
+        (
+            11,
+            "TI1011",
+            "Product Sep Temp",
+            "分离器温度",
+            "°C",
+            "分离器",
+        ),
+        (
+            12,
+            "LIC1012",
+            "Product Sep Level",
+            "分离器液位",
+            "%",
+            "分离器",
+        ),
+        (
+            13,
+            "PIC1013",
+            "Prod Sep Pressure",
+            "分离器压力",
+            "kPa gauge",
+            "分离器",
+        ),
         (
             14,
+            "FI1014",
             "Prod Sep Underflow (stream 10)",
             "分离器釜液（物流 10）",
             "m³/h",
             "分离器",
         ),
-        (15, "Stripper Level", "汽提塔液位", "%", "汽提塔"),
-        (16, "Stripper Pressure", "汽提塔压力", "kPa gauge", "汽提塔"),
+        (15, "LIC1015", "Stripper Level", "汽提塔液位", "%", "汽提塔"),
+        (
+            16,
+            "PI1016",
+            "Stripper Pressure",
+            "汽提塔压力",
+            "kPa gauge",
+            "汽提塔",
+        ),
         (
             17,
+            "FIC1017",
             "Stripper Underflow (stream 11)",
             "产品流量（物流 11）",
             "m³/h",
             "汽提塔",
         ),
-        (18, "Stripper Temperature", "汽提塔温度", "°C", "汽提塔"),
-        (19, "Stripper Steam Flow", "汽提蒸汽流量", "kg/h", "汽提塔"),
-        (20, "Compressor Work", "压缩机功率", "kW", "压缩机"),
+        (
+            18,
+            "TIC1018",
+            "Stripper Temperature",
+            "汽提塔温度",
+            "°C",
+            "汽提塔",
+        ),
+        (
+            19,
+            "FIC1019",
+            "Stripper Steam Flow",
+            "汽提蒸汽流量",
+            "kg/h",
+            "汽提塔",
+        ),
+        (
+            20,
+            "JI1020",
+            "Compressor Work",
+            "压缩机功率",
+            "kW",
+            "压缩机",
+        ),
         (
             21,
+            "TIC1021",
             "Reactor Cooling Water Outlet Temp",
             "反应器冷却水出口温度",
             "°C",
@@ -151,6 +249,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             22,
+            "TI1022",
             "Separator Cooling Water Outlet Temp",
             "冷凝器冷却水出口温度",
             "°C",
@@ -158,6 +257,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             23,
+            "AIC1023",
             "Component A (stream 6)",
             "组分 A（物流 6）",
             "mol %",
@@ -165,6 +265,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             24,
+            "AI1024",
             "Component B (stream 6)",
             "组分 B（物流 6）",
             "mol %",
@@ -172,6 +273,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             25,
+            "AI1025",
             "Component C (stream 6)",
             "组分 C（物流 6）",
             "mol %",
@@ -179,6 +281,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             26,
+            "AIC1026",
             "Component D (stream 6)",
             "组分 D（物流 6）",
             "mol %",
@@ -186,6 +289,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             27,
+            "AIC1027",
             "Component E (stream 6)",
             "组分 E（物流 6）",
             "mol %",
@@ -193,6 +297,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             28,
+            "AI1028",
             "Component F (stream 6)",
             "组分 F（物流 6）",
             "mol %",
@@ -200,6 +305,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             29,
+            "AI1029",
             "Component A (stream 9)",
             "组分 A（物流 9）",
             "mol %",
@@ -207,6 +313,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             30,
+            "AIC1030",
             "Component B (stream 9)",
             "组分 B（物流 9）",
             "mol %",
@@ -214,6 +321,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             31,
+            "AI1031",
             "Component C (stream 9)",
             "组分 C（物流 9）",
             "mol %",
@@ -221,6 +329,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             32,
+            "AI1032",
             "Component D (stream 9)",
             "组分 D（物流 9）",
             "mol %",
@@ -228,6 +337,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             33,
+            "AI1033",
             "Component E (stream 9)",
             "组分 E（物流 9）",
             "mol %",
@@ -235,6 +345,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             34,
+            "AI1034",
             "Component F (stream 9)",
             "组分 F（物流 9）",
             "mol %",
@@ -242,6 +353,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             35,
+            "AI1035",
             "Component G (stream 9)",
             "组分 G（物流 9）",
             "mol %",
@@ -249,6 +361,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             36,
+            "AI1036",
             "Component H (stream 9)",
             "组分 H（物流 9）",
             "mol %",
@@ -256,6 +369,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             37,
+            "AI1037",
             "Component D (stream 11)",
             "组分 D（物流 11）",
             "mol %",
@@ -263,6 +377,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             38,
+            "AIC1038",
             "Component E (stream 11)",
             "组分 E（物流 11）",
             "mol %",
@@ -270,6 +385,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             39,
+            "AI1039",
             "Component F (stream 11)",
             "组分 F（物流 11）",
             "mol %",
@@ -277,6 +393,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             40,
+            "AI1040",
             "Component G (stream 11)",
             "组分 G（物流 11）",
             "mol %",
@@ -284,6 +401,7 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
         (
             41,
+            "AI1041",
             "Component H (stream 11)",
             "组分 H（物流 11）",
             "mol %",
@@ -291,8 +409,9 @@ fn xmeas_meta() -> Vec<MeasMeta> {
         ),
     ]
     .into_iter()
-    .map(|(n, name_en, name_zh, unit, group_zh)| MeasMeta {
+    .map(|(n, tag, name_en, name_zh, unit, group_zh)| MeasMeta {
         n,
+        tag,
         name_en,
         name_zh,
         unit,
@@ -303,30 +422,43 @@ fn xmeas_meta() -> Vec<MeasMeta> {
 
 fn xmv_meta() -> Vec<MvMeta> {
     [
-        (1, "D Feed Flow (stream 2)", "D 进料阀（物流 2）"),
-        (2, "E Feed Flow (stream 3)", "E 进料阀（物流 3）"),
-        (3, "A Feed Flow (stream 1)", "A 进料阀（物流 1）"),
-        (4, "A and C Feed Flow (stream 4)", "A/C 进料阀（物流 4）"),
-        (5, "Compressor Recycle Valve", "压缩机循环阀"),
-        (6, "Purge Valve (stream 9)", "放空阀（物流 9）"),
+        (1, "FV1002", "D Feed Flow (stream 2)", "D 进料阀（物流 2）"),
+        (2, "FV1003", "E Feed Flow (stream 3)", "E 进料阀（物流 3）"),
+        (3, "FV1001", "A Feed Flow (stream 1)", "A 进料阀（物流 1）"),
+        (
+            4,
+            "FV1004",
+            "A and C Feed Flow (stream 4)",
+            "A/C 进料阀（物流 4）",
+        ),
+        (5, "FV1005", "Compressor Recycle Valve", "压缩机循环阀"),
+        (6, "FV1010", "Purge Valve (stream 9)", "放空阀（物流 9）"),
         (
             7,
+            "LV1012",
             "Separator Pot Liquid Flow (stream 10)",
             "分离器釜液阀（物流 10）",
         ),
         (
             8,
+            "FV1017",
             "Stripper Liquid Product Flow (stream 11)",
             "产品阀（物流 11）",
         ),
-        (9, "Stripper Steam Valve", "汽提蒸汽阀"),
-        (10, "Reactor Cooling Water Flow", "反应器冷却水阀"),
-        (11, "Condenser Cooling Water Flow", "冷凝器冷却水阀"),
-        (12, "Agitator Speed", "搅拌转速"),
+        (9, "FV1019", "Stripper Steam Valve", "汽提蒸汽阀"),
+        (10, "FV1021", "Reactor Cooling Water Flow", "反应器冷却水阀"),
+        (
+            11,
+            "FV1022",
+            "Condenser Cooling Water Flow",
+            "冷凝器冷却水阀",
+        ),
+        (12, "SC1042", "Agitator Speed", "搅拌转速"),
     ]
     .into_iter()
-    .map(|(n, name_en, name_zh)| MvMeta {
+    .map(|(n, tag, name_en, name_zh)| MvMeta {
         n,
+        tag,
         name_en,
         name_zh,
         unit: "%",
@@ -462,6 +594,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
     [
         (
             1,
+            "FIC1002",
             "D Feed Flow",
             "D 进料流量",
             "kg/h",
@@ -471,6 +604,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             2,
+            "FIC1003",
             "E Feed Flow",
             "E 进料流量",
             "kg/h",
@@ -480,6 +614,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             3,
+            "FIC1001",
             "A Feed Flow",
             "A 进料流量",
             "kscmh",
@@ -489,6 +624,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             4,
+            "FIC1004",
             "A/C Feed Flow",
             "A/C 进料流量",
             "kscmh",
@@ -498,6 +634,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             5,
+            "FIC1005",
             "Recycle Flow",
             "循环流量",
             "kscmh",
@@ -507,6 +644,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             6,
+            "FIC1010",
             "Purge Rate",
             "放空流量",
             "kscmh",
@@ -516,6 +654,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             7,
+            "LIC1012",
             "Separator Level",
             "分离器液位",
             "%",
@@ -525,6 +664,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             8,
+            "LIC1015",
             "Stripper Level",
             "汽提塔液位",
             "%",
@@ -534,6 +674,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             9,
+            "FIC1019",
             "Stripper Steam Flow",
             "汽提蒸汽流量",
             "kg/h",
@@ -543,6 +684,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             10,
+            "TIC1021",
             "Reactor CW Outlet Temp",
             "反应器冷却水出口温度",
             "°C",
@@ -552,6 +694,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             11,
+            "FIC1017",
             "Stripper Underflow",
             "产品流量",
             "m³/h",
@@ -561,6 +704,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             12,
+            "PIC1013",
             "Separator Pressure (unused loop)",
             "分离器压力（未接入主回路）",
             "kPa gauge",
@@ -570,6 +714,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             13,
+            "AIC1023",
             "Reactor Feed A",
             "反应器进料 A",
             "mol %",
@@ -579,6 +724,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             14,
+            "AIC1026",
             "Reactor Feed D",
             "反应器进料 D",
             "mol %",
@@ -588,6 +734,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             15,
+            "AIC1027",
             "Reactor Feed E",
             "反应器进料 E",
             "mol %",
@@ -597,6 +744,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             16,
+            "TIC1018",
             "Stripper Temperature",
             "汽提塔温度",
             "°C",
@@ -606,6 +754,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             17,
+            "LIC1008",
             "Reactor Level",
             "反应器液位",
             "%",
@@ -615,6 +764,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             18,
+            "TIC1009",
             "Reactor Temperature",
             "反应器温度",
             "°C",
@@ -624,6 +774,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             19,
+            "AIC1030",
             "Purge B Composition",
             "放空 B 含量",
             "mol %",
@@ -633,6 +784,7 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         ),
         (
             20,
+            "AIC1038",
             "Product E Composition",
             "产品 E 含量",
             "mol %",
@@ -643,8 +795,9 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
     ]
     .into_iter()
     .map(
-        |(n, name_en, name_zh, unit, pv, cascade, group_zh)| SetpointMeta {
+        |(n, tag, name_en, name_zh, unit, pv, cascade, group_zh)| SetpointMeta {
             n,
+            tag,
             name_en,
             name_zh,
             unit,
@@ -655,4 +808,36 @@ fn setpoint_meta(defaults: &[f64; 20]) -> Vec<SetpointMeta> {
         },
     )
     .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn dcs_tags_unique_and_complete() {
+        let c = catalog();
+        assert_eq!(c.xmeas.len(), 41);
+        assert_eq!(c.xmv.len(), 12);
+        assert_eq!(c.setpoints.len(), 20);
+        let mut seen = HashSet::new();
+        for m in &c.xmeas {
+            assert!(!m.tag.is_empty());
+            assert!(seen.insert(m.tag), "duplicate measurement tag {}", m.tag);
+        }
+        for m in &c.xmv {
+            assert!(!m.tag.is_empty());
+            assert!(seen.insert(m.tag), "duplicate valve tag {}", m.tag);
+        }
+        for s in &c.setpoints {
+            assert!(!s.tag.is_empty());
+            assert!(
+                c.xmeas.iter().any(|m| m.tag == s.tag),
+                "setpoint {} tag {} has no matching measurement",
+                s.n,
+                s.tag
+            );
+        }
+    }
 }

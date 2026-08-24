@@ -122,8 +122,8 @@
                   <button type="button" class="lock" :class="{ on: held.has(s.n) }" @click="toggleHold(s.n)">
                     {{ held.has(s.n) ? "锁" : "随" }}
                   </button>
-                  {{ s.n }}. {{ s.name_zh }}
-                  <small>{{ s.unit }}</small>
+                  {{ s.tag }}
+                  <small>{{ s.name_zh }} · {{ s.unit }}</small>
                 </span>
                 <input v-model.number="setpoints[s.n]" type="number" step="any" />
               </label>
@@ -133,11 +133,11 @@
             </template>
             <template v-else>
               <label>
-                汽提塔液位设定 / %
+                LIC1015 汽提塔液位设定 / %
                 <input v-model.number="stripperSp" type="number" step="0.1" />
               </label>
               <label v-for="v in catalog?.xmv || []" :key="v.n" class="sp">
-                <span>{{ v.n }}. {{ v.name_zh }}</span>
+                <span>{{ v.tag }} <small>{{ v.name_zh }}</small></span>
                 <input v-model.number="openXmv[v.n]" type="number" step="0.1" />
               </label>
             </template>
@@ -152,6 +152,7 @@
         <div class="pane-body stage-body">
           <PlantPfd
             :xmeas="frameXmeas"
+            :meta="measByN"
             :status="pfdStatus"
             :pinned="tags"
             :focus-key="focusKey"
@@ -196,13 +197,32 @@
             @focus="focusKey = $event"
             @set-y-limits="setYLimits"
             @clear-y-limits="clearYLimits"
-          />
-          <div class="picker">
-            <input v-model="query" type="search" placeholder="补充趋势：反应器、液位、产品…" />
-            <button v-for="opt in pickerOpts" :key="opt.key" type="button" @click="addTag(opt.key)">
-              {{ opt.label }}
-            </button>
-          </div>
+          >
+            <template #picker>
+              <div class="picker">
+                <div class="picker-row">
+                  <input
+                    v-model="query"
+                    type="search"
+                    placeholder="补充趋势：FIC、LIC、产品…"
+                    @keydown.enter.prevent="onPickerAdd"
+                  />
+                  <button type="button" class="add" title="添加趋势" @click="onPickerAdd">+</button>
+                </div>
+                <div v-if="pickerOpts.length" class="picker-opts">
+                  <button
+                    v-for="opt in pickerOpts"
+                    :key="opt.key"
+                    type="button"
+                    :title="opt.desc"
+                    @click="addTag(opt.key)"
+                  >
+                    {{ opt.label }}
+                  </button>
+                </div>
+              </div>
+            </template>
+          </TrendChart>
         </div>
       </section>
     </div>
@@ -346,6 +366,11 @@ export default {
       });
       return map;
     },
+    measByN() {
+      const map = {};
+      for (const m of this.catalog?.xmeas || []) map[m.n] = m;
+      return map;
+    },
     pvSetpoints() {
       const map = {};
       if (this.mode !== "closed_loop") return map;
@@ -356,26 +381,28 @@ export default {
       return map;
     },
     kpiItems() {
-      return KPI_STRIP.map((k) => {
-        const key = `xmeas:${k.n}`;
-        const meta = this.catalog?.xmeas?.[k.n - 1];
-        const lim = LIMITS[k.n] || { scaleLo: 0, scaleHi: 100 };
-        const value = this.frameXmeas[k.n - 1];
+      return KPI_STRIP.map((n) => {
+        const key = `xmeas:${n}`;
+        const meta = this.catalog?.xmeas?.[n - 1];
+        const lim = LIMITS[n] || { scaleLo: 0, scaleHi: 100 };
+        const value = this.frameXmeas[n - 1];
+        const tag = displayTag(meta, "xmeas", n);
         return {
           key,
-          name: k.name,
+          name: tag,
+          desc: meta?.name_zh || "",
           unit: meta?.unit || "",
           value,
           text: formatPv(value),
-          status: exceptionStatus(k.n, value),
+          status: exceptionStatus(n, value),
           pinned: this.tags.includes(key),
           focus: this.focusKey === key,
           scaleLo: lim.scaleLo,
           scaleHi: lim.scaleHi,
           loOp: lim.loOp ?? null,
           hiOp: lim.hiOp ?? null,
-          setpoint: this.pvSetpoints[k.n] ?? null,
-          hint: "拖入趋势",
+          setpoint: this.pvSetpoints[n] ?? null,
+          hint: [tag, meta?.name_zh, "拖入趋势"].filter(Boolean).join(" · "),
         };
       });
     },
@@ -388,7 +415,8 @@ export default {
         return {
           key,
           color: PENS[i % PENS.length],
-          label: meta ? `${kind === "xmeas" ? "Y" : "U"}${n} ${meta.name_zh}` : key,
+          label: displayTag(meta, kind, n),
+          desc: meta?.name_zh || "",
           unit: meta?.unit || "",
           values: values || [],
           hidden: this.hiddenTags.includes(key),
@@ -407,13 +435,13 @@ export default {
       const out = [];
       for (const m of this.catalog.xmeas) {
         const key = `xmeas:${m.n}`;
-        const label = `Y${m.n} ${m.name_zh}`;
-        if (!this.tags.includes(key) && matches(label, m.n, q)) out.push({ key, label });
+        if (this.tags.includes(key) || !matchesMeta(m, m.n, q)) continue;
+        out.push({ key, label: displayTag(m, "xmeas", m.n), desc: m.name_zh });
       }
       for (const m of this.catalog.xmv) {
         const key = `xmv:${m.n}`;
-        const label = `U${m.n} ${m.name_zh}`;
-        if (!this.tags.includes(key) && matches(label, m.n, q)) out.push({ key, label });
+        if (this.tags.includes(key) || !matchesMeta(m, m.n, q)) continue;
+        out.push({ key, label: displayTag(m, "xmv", m.n), desc: m.name_zh });
       }
       return out.slice(0, 12);
     },
@@ -421,7 +449,7 @@ export default {
       if (!this.dragKey) return { label: "", color: PENS[0] };
       const { kind, n } = splitTag(this.dragKey);
       const meta = kind === "xmeas" ? this.catalog?.xmeas?.[n - 1] : this.catalog?.xmv?.[n - 1];
-      const label = meta ? `${kind === "xmeas" ? "Y" : "U"}${n} ${meta.name_zh}` : this.dragKey;
+      const label = displayTag(meta, kind, n);
       const idx = this.tags.includes(this.dragKey) ? this.tags.indexOf(this.dragKey) : this.tags.length;
       return { label, color: PENS[idx % PENS.length] };
     },
@@ -604,6 +632,10 @@ export default {
       this.query = "";
       this.save();
     },
+    onPickerAdd() {
+      const first = this.pickerOpts[0];
+      if (first) this.addTag(first.key);
+    },
     removeTag(key) {
       this.tags = this.tags.filter((k) => k !== key);
       this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
@@ -616,8 +648,12 @@ export default {
       this.save();
     },
     toggleHidden(key) {
-      if (this.hiddenTags.includes(key)) this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
-      else this.hiddenTags = [...this.hiddenTags, key];
+      const hiding = !this.hiddenTags.includes(key);
+      if (hiding) this.hiddenTags = [...this.hiddenTags, key];
+      else this.hiddenTags = this.hiddenTags.filter((k) => k !== key);
+      if (hiding && this.focusKey === key) {
+        this.focusKey = this.tags.find((k) => !this.hiddenTags.includes(k)) || "";
+      }
       this.save();
     },
     setYLimits({ key, lo, hi }) {
@@ -733,8 +769,14 @@ function splitTag(key) {
   return { kind, n: Number(n) };
 }
 
-function matches(label, n, q) {
-  return label.toLowerCase().includes(q) || String(n) === q;
+function displayTag(meta, kind, n) {
+  if (meta?.tag) return meta.tag;
+  return `${kind === "xmeas" ? "Y" : "U"}${n}`;
+}
+
+function matchesMeta(meta, n, q) {
+  const hay = [meta?.tag, meta?.name_zh, meta?.name_en, String(n)].filter(Boolean).join(" ").toLowerCase();
+  return hay.includes(q);
 }
 
 function clamp(n, lo, hi) {
@@ -965,15 +1007,13 @@ select {
   grid-template-columns: 1fr 1fr;
   gap: 0.4rem;
 }
-.presets,
-.picker {
+.presets {
   display: flex;
   flex-wrap: wrap;
   gap: 0.3rem;
   margin: 0.25rem 0 0.5rem;
 }
 .presets button,
-.picker button,
 .link,
 .lock {
   border: 1px solid var(--ink);
@@ -1021,8 +1061,11 @@ select {
   gap: 0.2rem 0.35rem;
   align-items: baseline;
   color: var(--ink);
+  font-family: var(--type-data);
+  font-size: 0.78rem;
 }
 .sp small {
+  font-family: var(--type-ui);
   color: var(--ink-soft);
 }
 .lock.on {
@@ -1033,11 +1076,50 @@ select {
   margin-bottom: 0.6rem;
 }
 .picker {
-  padding: 0.25rem 0.5rem 0.45rem;
-  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
 }
-.picker input {
-  flex: 1 1 12rem;
+.picker-row {
+  display: flex;
+  align-items: stretch;
+  min-width: 0;
+}
+.picker-row input {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 1px solid var(--rule);
+  border-right: 0;
+  background: #f3f5f6;
+  padding: 0.2rem 0.35rem;
+  color: var(--ink);
+  font-family: var(--type-data);
+  font-size: 0.72rem;
+}
+.picker-row .add {
+  flex: 0 0 auto;
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: 0 0.5rem;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+.picker-opts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.2rem;
+}
+.picker-opts button {
+  border: 1px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  padding: 0.15rem 0.35rem;
+  cursor: pointer;
+  font-size: 0.68rem;
+  font-family: var(--type-data);
 }
 .tag-ghost {
   position: fixed;

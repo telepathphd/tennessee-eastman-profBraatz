@@ -25,6 +25,7 @@
       </svg>
       <span class="copy">
         <span class="name">{{ item.name }}</span>
+        <span v-if="item.desc" class="desc">{{ item.desc }}</span>
         <b class="pv">{{ item.text }}</b>
         <span class="unit">{{ item.unit }}</span>
       </span>
@@ -147,8 +148,17 @@ export default {
   min-width: 0;
 }
 .name {
-  font-size: 0.72rem;
+  font-family: var(--type-data);
+  font-size: 0.78rem;
+  letter-spacing: 0.02em;
+  color: var(--ink);
+}
+.desc {
+  font-size: 0.62rem;
   color: var(--ink-soft);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 .pv {
   font-family: var(--type-data);
